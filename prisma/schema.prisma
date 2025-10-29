@@ -1,0 +1,349 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  SUPER_ADMIN
+  MANAGER
+  BARTENDER
+  BARBACK
+}
+
+enum UserStatus {
+  ACTIVE
+  INACTIVE
+  PENDING
+}
+
+enum OverrideStatus {
+  PENDING
+  APPROVED
+  DECLINED
+  ACTIVE
+}
+
+enum TradeStatus {
+  PROPOSED
+  ACCEPTED
+  APPROVED
+  DECLINED
+  CANCELLED
+}
+
+enum NotificationType {
+  AVAILABILITY_REMINDER
+  AVAILABILITY_DEADLINE
+  SHIFT_ASSIGNED
+  SHIFT_CHANGED
+  TRADE_PROPOSED
+  TRADE_UPDATED
+  OVERRIDE_REQUESTED
+  OVERRIDE_APPROVED
+  TIP_PUBLISHED
+  TIP_UPDATED
+}
+
+model User {
+  id                    String            @id @default(cuid())
+  email                 String            @unique
+  name                  String
+  role                  Role
+  status                UserStatus        @default(ACTIVE)
+  hashedPassword        String?
+  
+  // Staff-specific fields
+  hasDayJob             Boolean           @default(false)
+  dayJobCutoff          String?           // Time string, e.g., "16:59"
+  isLead                Boolean           @default(false)
+  preferredVenuesOrder  String[]          // Array of venue IDs in order
+  
+  // Availability defaults
+  defaultAvailability   Json?             // JSON structure for recurring availability
+  autoSubmitAvailability Boolean          @default(false)
+  
+  // Notification preferences
+  notificationPrefs     Json?             // { email: bool, push: bool, quietHours: {...} }
+  
+  // Relations
+  managedVenues         Venue[]           @relation("VenueManagers")
+  createdVenues         Venue[]           @relation("VenueCreator")
+  shiftAssignments      ShiftAssignment[]
+  availabilities        Availability[]
+  externalBlocks        ExternalBlock[]
+  proposedTrades        ShiftTrade[]      @relation("TradeProposer")
+  receivedTrades        ShiftTrade[]      @relation("TradeReceiver")
+  overrideApprovals     OverrideApproval[]
+  notifications         Notification[]
+  tipPayouts            TipPayout[]
+  auditLogs             AuditLog[]
+  
+  createdAt             DateTime          @default(now())
+  updatedAt             DateTime          @updatedAt
+  
+  @@index([email])
+  @@index([role])
+  @@index([status])
+}
+
+model Venue {
+  id                      String    @id @default(cuid())
+  name                    String
+  isNetworked             Boolean   @default(true)
+  priority                Int       @default(0)
+  
+  // Configuration
+  availabilityDeadlineDay Int       @default(10) // Day of month
+  tipPoolEnabled          Boolean   @default(false)
+  
+  // Relations
+  managers                User[]    @relation("VenueManagers")
+  createdBy               User      @relation("VenueCreator", fields: [createdById], references: [id])
+  createdById             String
+  
+  shifts                  Shift[]
+  
+  createdAt               DateTime  @default(now())
+  updatedAt               DateTime  @updatedAt
+  
+  @@index([isNetworked])
+  @@index([createdById])
+}
+
+model Shift {
+  id                 String            @id @default(cuid())
+  
+  venue              Venue             @relation(fields: [venueId], references: [id], onDelete: Cascade)
+  venueId            String
+  
+  date               DateTime          // Date of shift
+  startTime          String            // Time string, e.g., "18:00"
+  endTime            String            // Time string, e.g., "02:00"
+  
+  // Requirements
+  bartendersRequired Int               @default(1)
+  barbacksRequired   Int               @default(0)
+  leadsRequired      Int               @default(0)
+  
+  // Relations
+  assignments        ShiftAssignment[]
+  overrides          Override[]
+  trades             ShiftTrade[]
+  
+  createdAt          DateTime          @default(now())
+  updatedAt          DateTime          @updatedAt
+  
+  @@index([venueId])
+  @@index([date])
+  @@index([venueId, date])
+}
+
+model ShiftAssignment {
+  id              String    @id @default(cuid())
+  
+  shift           Shift     @relation(fields: [shiftId], references: [id], onDelete: Cascade)
+  shiftId         String
+  
+  user            User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId          String
+  
+  role            Role      // BARTENDER or BARBACK
+  isLead          Boolean   @default(false)
+  
+  // Tip pool
+  tipAmount       Decimal?  @db.Decimal(10, 2)
+  tipCurrency     String?   @default("USD")
+  tipEnteredBy    String?
+  tipEnteredAt    DateTime?
+  tipUpdatedAt    DateTime?
+  
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+  
+  @@unique([shiftId, userId])
+  @@index([shiftId])
+  @@index([userId])
+  @@index([userId, shiftId])
+}
+
+model Override {
+  id              String            @id @default(cuid())
+  
+  shift           Shift             @relation(fields: [shiftId], references: [id], onDelete: Cascade)
+  shiftId         String
+  
+  userId          String            // User being assigned with override
+  reason          String
+  violationType   String            // "cutoff", "request_off", "double_booking", "lead_shortage"
+  status          OverrideStatus    @default(PENDING)
+  
+  // Relations
+  approvals       OverrideApproval[]
+  history         Json[]            // Immutable audit trail
+  
+  createdAt       DateTime          @default(now())
+  updatedAt       DateTime          @updatedAt
+  
+  @@index([shiftId])
+  @@index([userId])
+  @@index([status])
+}
+
+model OverrideApproval {
+  id          String    @id @default(cuid())
+  
+  override    Override  @relation(fields: [overrideId], references: [id], onDelete: Cascade)
+  overrideId  String
+  
+  approver    User      @relation(fields: [approverId], references: [id])
+  approverId  String
+  
+  approved    Boolean
+  comment     String?
+  
+  createdAt   DateTime  @default(now())
+  
+  @@index([overrideId])
+  @@index([approverId])
+}
+
+model Availability {
+  id            String    @id @default(cuid())
+  
+  user          User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId        String
+  
+  month         String    // "2025-11" format
+  data          Json      // Structure: { dates: { "2025-11-01": { available: bool, ... } } }
+  
+  submittedAt   DateTime?
+  lockedAt      DateTime?
+  isLocked      Boolean   @default(false)
+  
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  
+  @@unique([userId, month])
+  @@index([userId])
+  @@index([month])
+}
+
+model ExternalBlock {
+  id          String    @id @default(cuid())
+  
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId      String
+  
+  startTime   DateTime
+  endTime     DateTime
+  source      String    // "import", "manual"
+  description String?
+  
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  
+  @@index([userId])
+  @@index([startTime])
+  @@index([userId, startTime])
+}
+
+model ShiftTrade {
+  id              String      @id @default(cuid())
+  
+  shift           Shift       @relation(fields: [shiftId], references: [id], onDelete: Cascade)
+  shiftId         String
+  
+  proposer        User        @relation("TradeProposer", fields: [proposerId], references: [id])
+  proposerId      String
+  
+  receiver        User        @relation("TradeReceiver", fields: [receiverId], references: [id])
+  receiverId      String
+  
+  status          TradeStatus @default(PROPOSED)
+  reason          String?
+  
+  // Manager approval
+  approvedBy      String?
+  approvedAt      DateTime?
+  declinedReason  String?
+  
+  createdAt       DateTime    @default(now())
+  updatedAt       DateTime    @updatedAt
+  
+  @@index([shiftId])
+  @@index([proposerId])
+  @@index([receiverId])
+  @@index([status])
+}
+
+model TipPayout {
+  id          String    @id @default(cuid())
+  
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId      String
+  
+  shiftId     String    // Reference to shift (not FK to avoid cascade issues)
+  amount      Decimal   @db.Decimal(10, 2)
+  currency    String    @default("USD")
+  
+  enteredBy   String
+  enteredAt   DateTime  @default(now())
+  
+  history     Json[]    // Edit history
+  
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  
+  @@index([userId])
+  @@index([shiftId])
+}
+
+model Notification {
+  id          String            @id @default(cuid())
+  
+  user        User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId      String
+  
+  type        NotificationType
+  title       String
+  message     String
+  data        Json?             // Additional context data
+  
+  read        Boolean           @default(false)
+  sentAt      DateTime          @default(now())
+  readAt      DateTime?
+  
+  createdAt   DateTime          @default(now())
+  
+  @@index([userId])
+  @@index([userId, read])
+  @@index([sentAt])
+}
+
+model AuditLog {
+  id          String    @id @default(cuid())
+  
+  user        User?     @relation(fields: [userId], references: [id], onDelete: SetNull)
+  userId      String?
+  
+  action      String    // "create", "update", "delete", "approve", etc.
+  entity      String    // "shift", "override", "trade", etc.
+  entityId    String
+  
+  changes     Json?     // Before/after snapshot
+  metadata    Json?     // Additional context
+  
+  createdAt   DateTime  @default(now())
+  
+  @@index([userId])
+  @@index([entity, entityId])
+  @@index([createdAt])
+}
+
