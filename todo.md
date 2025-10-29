@@ -7,12 +7,14 @@ _Last updated: 2025-10-29 UTC_
 ## Implementation Order (by dependency)
 
 ### ✅ Phase 0: Foundation (COMPLETE)
+
 - [x] Meta & Infra
 - [x] Theming & Design System
 - [x] Database Schema (all models)
 - [x] Validation & Type Safety
 
 ### ✅ Phase 1: Authentication & Core User Management (COMPLETE)
+
 - [x] Authentication system (NextAuth.js with credentials provider)
 - [x] Login/logout/session management
 - [x] Protected routes & API authorization
@@ -20,6 +22,7 @@ _Last updated: 2025-10-29 UTC_
 - [x] User registration flow (invite-based utility + seed script)
 
 ### 🔄 Phase 2: User Profiles & Settings (NEXT)
+
 - [ ] (UI) User profile page (view/edit)
 - [ ] (UI) Day job settings: toggle + cutoff time picker
 - [ ] (UI) Lead status indicator
@@ -30,6 +33,7 @@ _Last updated: 2025-10-29 UTC_
 - [ ] (UI) Notification preferences + quiet hours
 
 ### 🏢 Phase 3: Venue Management
+
 - [ ] (UI) Venue list page (filtered by role)
 - [ ] (UI) Create venue form (Super Admin only)
 - [ ] (UI) Edit venue (name, networked, priority, deadline day, tip pool)
@@ -39,6 +43,7 @@ _Last updated: 2025-10-29 UTC_
 - [ ] (VAL) Prevent deletion of venues with active shifts
 
 ### 📅 Phase 4: Availability System
+
 - [ ] (UI) Month calendar picker (next month view by default)
 - [ ] (UI) Quick actions: select all available/unavailable, weekends, etc.
 - [ ] (UI) Venue-specific deadline indicator (e.g., "Due by Nov 10")
@@ -50,6 +55,7 @@ _Last updated: 2025-10-29 UTC_
 - [ ] (VAL) Prevent scheduling users with unavailable dates
 
 ### 📊 Phase 5: Shift Management & Scheduling
+
 - [ ] (UI) Calendar grid scheduler (manager view)
 - [ ] (UI) Create shift modal: venue, date, times, requirements (bartenders, barbacks, leads)
 - [ ] (UI) Assign staff to shifts with role selection
@@ -69,6 +75,7 @@ _Last updated: 2025-10-29 UTC_
 - [ ] (NOTIF) Notify users when shift times change
 
 ### ⚠️ Phase 6: Override System
+
 - [ ] (UI) Override request modal: reason, violation type
 - [ ] (FLOW) Trigger override when validation fails but manager wants to proceed
 - [ ] (UI) Manager approval interface (list pending overrides)
@@ -83,6 +90,7 @@ _Last updated: 2025-10-29 UTC_
 - [ ] (NOTIF) Notify both when override approved/declined
 
 ### 🔄 Phase 7: Shift Trading
+
 - [ ] (UI) Staff: "Trade this shift" button (mobile-optimized)
 - [ ] (UI) Select recipient from eligible staff list
 - [ ] (API) Propose trade endpoint
@@ -101,6 +109,7 @@ _Last updated: 2025-10-29 UTC_
 - [ ] (NOTIF) Notify both users when manager approves/declines
 
 ### 📥 Phase 8: External Schedule Imports
+
 - [ ] (SPEC) Define CSV format: date, start_time, end_time, description
 - [ ] (SPEC) Define JSON format: same fields as CSV
 - [ ] (UI) Import page: file upload + preview
@@ -112,6 +121,7 @@ _Last updated: 2025-10-29 UTC_
 - [ ] (API) Manual external block creation (manager override)
 
 ### 📈 Phase 9: Reports & Analytics
+
 - [ ] (UI) Monthly shift equity report
   - User name, total shifts, lead shifts, shifts by venue
 - [ ] (UI) Venue summary report
@@ -124,6 +134,7 @@ _Last updated: 2025-10-29 UTC_
 - [ ] (UI) Export reports as CSV/PDF
 
 ### 💰 Phase 10: Tip Pool (Optional)
+
 - [ ] (UI) Manager: tip entry form per shift assignment
 - [ ] (UI) Manager: bulk tip entry for entire shift
 - [ ] (API) Tip payout create/update endpoints (manager only)
@@ -136,6 +147,7 @@ _Last updated: 2025-10-29 UTC_
 - [ ] (ERR-UX) "Missing tip entry" → suggest: draft amount + alert manager
 
 ### 🔔 Phase 11: Notification System (Ongoing)
+
 - [ ] (API) Notification creation service
 - [ ] (API) Mark notification as read
 - [ ] (API) Bulk mark all read
@@ -148,6 +160,7 @@ _Last updated: 2025-10-29 UTC_
 - [ ] ✅ (DB) All notification types already defined
 
 ### 📱 Phase 12: Mobile & Desktop Optimization (Ongoing)
+
 - [ ] (MOBILE) Optimize availability calendar for touch
 - [ ] (MOBILE) Optimize trade flow for small screens
 - [ ] (MOBILE) Optimize notification view
@@ -160,6 +173,7 @@ _Last updated: 2025-10-29 UTC_
 ---
 
 ## Done (Changelog)
+
 - [x] 2025-10-29 (1cbdbfe) Initial project setup: Next.js, TypeScript, TailwindCSS, Prisma, ESLint, Prettier, Jest
 - [x] 2025-10-29 (1cbdbfe) Complete Prisma schema: User, Venue, Shift, ShiftAssignment, Override, Availability, ShiftTrade, ExternalBlock, TipPayout, Notification, AuditLog models
 - [x] 2025-10-29 (1cbdbfe) Theme system complete: light/dark/system preference detection, CSS variables, ThemeProvider, ThemeToggle component
@@ -176,3 +190,4 @@ _Last updated: 2025-10-29 UTC_
 - [x] 2025-10-29 (PENDING) Dashboard page with role-based content
 - [x] 2025-10-29 (PENDING) User creation utilities and invite system
 - [x] 2025-10-29 (PENDING) Database seed script with test accounts (admin, manager, bartender, barback)
+- [x] 2025-10-29 (PENDING) NPM dependencies installed (node v18.20.8, npm v10.8.2, --legacy-peer-deps for next-auth peer conflicts)
