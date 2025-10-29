@@ -72,10 +72,20 @@ scheduler/
 
 1. Clone the repository
 2. Copy `.env.example` to `.env` and configure
-3. Install dependencies: `npm install`
+3. Install dependencies: `npm install` (this will also set up pre-commit hooks)
 4. Set up database: `npm run db:setup`
 5. Run development server: `npm run dev`
 6. Visit `http://localhost:3000`
+
+### Pre-commit Hooks
+
+The project uses Husky and lint-staged to run linting and formatting checks before commits. This ensures code quality and consistency. The hooks are automatically installed when you run `npm install`.
+
+### CI/CD
+
+GitHub Actions workflows automatically run on push and pull requests:
+- **CI**: Runs linting, tests, and builds
+- **Deploy**: Configured for your deployment provider (requires setup)
 
 ## License
 
