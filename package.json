@@ -16,7 +16,8 @@
     "db:push": "prisma db push",
     "db:migrate": "prisma migrate dev",
     "db:studio": "prisma studio",
-    "db:setup": "prisma generate && prisma db push",
+    "db:seed": "tsx prisma/seed.ts",
+    "db:setup": "prisma generate && prisma db push && npm run db:seed",
     "prepare": "husky install"
   },
   "dependencies": {
@@ -24,6 +25,9 @@
     "react": "^18.3.0",
     "react-dom": "^18.3.0",
     "@prisma/client": "^5.18.0",
+    "next-auth": "^4.24.0",
+    "@auth/prisma-adapter": "^1.6.0",
+    "bcryptjs": "^2.4.3",
     "zod": "^3.23.0",
     "date-fns": "^3.6.0",
     "clsx": "^2.1.0"
@@ -33,6 +37,7 @@
     "@types/react": "^18.3.0",
     "@types/react-dom": "^18.3.0",
     "@types/jest": "^29.5.0",
+    "@types/bcryptjs": "^2.4.6",
     "@testing-library/react": "^15.0.0",
     "@testing-library/jest-dom": "^6.4.0",
     "typescript": "^5.5.0",
@@ -44,6 +49,7 @@
     "jest-environment-jsdom": "^29.7.0",
     "husky": "^9.0.0",
     "lint-staged": "^15.2.0",
+    "tsx": "^4.7.0",
     "autoprefixer": "^10.4.19",
     "postcss": "^8.4.38",
     "tailwindcss": "^3.4.4"
@@ -56,6 +62,9 @@
     "*.{json,css,md}": [
       "prettier --write"
     ]
+  },
+  "prisma": {
+    "seed": "tsx prisma/seed.ts"
   }
 }
 

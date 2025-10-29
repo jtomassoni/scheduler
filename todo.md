@@ -12,14 +12,14 @@ _Last updated: 2025-10-29 UTC_
 - [x] Database Schema (all models)
 - [x] Validation & Type Safety
 
-### 🔄 Phase 1: Authentication & Core User Management (NEXT)
-- [ ] Authentication system (NextAuth.js or similar)
-- [ ] Login/logout/session management
-- [ ] Protected routes & API authorization
-- [ ] Role-based middleware (SUPER_ADMIN, MANAGER, BARTENDER, BARBACK)
-- [ ] User registration flow (invite-based)
+### ✅ Phase 1: Authentication & Core User Management (COMPLETE)
+- [x] Authentication system (NextAuth.js with credentials provider)
+- [x] Login/logout/session management
+- [x] Protected routes & API authorization
+- [x] Role-based middleware (SUPER_ADMIN, MANAGER, BARTENDER, BARBACK)
+- [x] User registration flow (invite-based utility + seed script)
 
-### 📋 Phase 2: User Profiles & Settings
+### 🔄 Phase 2: User Profiles & Settings (NEXT)
 - [ ] (UI) User profile page (view/edit)
 - [ ] (UI) Day job settings: toggle + cutoff time picker
 - [ ] (UI) Lead status indicator
@@ -168,5 +168,11 @@ _Last updated: 2025-10-29 UTC_
 - [x] 2025-10-29 (1cbdbfe) Utility functions: time formatting, date handling, debounce
 - [x] 2025-10-29 (1cbdbfe) TypeScript type definitions for all domain models
 - [x] 2025-10-29 (721a5af) Comprehensive development documentation (DEVELOPMENT.md)
-- [x] 2025-10-29 (PENDING) Pre-commit hooks with Husky and lint-staged
-- [x] 2025-10-29 (PENDING) CI/CD pipelines: GitHub Actions for linting, testing, building, and deployment
+- [x] 2025-10-29 (f322109) Pre-commit hooks with Husky and lint-staged
+- [x] 2025-10-29 (f322109) CI/CD pipelines: GitHub Actions for linting, testing, building, and deployment
+- [x] 2025-10-29 (PENDING) NextAuth.js authentication with credentials provider and bcrypt password hashing
+- [x] 2025-10-29 (PENDING) Role-based middleware with route protection
+- [x] 2025-10-29 (PENDING) Login page with error handling and accessibility
+- [x] 2025-10-29 (PENDING) Dashboard page with role-based content
+- [x] 2025-10-29 (PENDING) User creation utilities and invite system
+- [x] 2025-10-29 (PENDING) Database seed script with test accounts (admin, manager, bartender, barback)
