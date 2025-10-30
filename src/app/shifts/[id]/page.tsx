@@ -1,0 +1,425 @@
+'use client';
+
+import { useEffect, useState } from 'react';
+import { useRouter, useParams } from 'next/navigation';
+import { useSession } from 'next-auth/react';
+
+interface User {
+  id: string;
+  name: string;
+  email: string;
+  role: string;
+  isLead: boolean;
+}
+
+interface ShiftAssignment {
+  id: string;
+  user: User;
+  role: string;
+  isLead: boolean;
+}
+
+interface Shift {
+  id: string;
+  date: string;
+  startTime: string;
+  endTime: string;
+  bartendersRequired: number;
+  barbacksRequired: number;
+  leadsRequired: number;
+  venue: {
+    id: string;
+    name: string;
+  };
+  assignments: ShiftAssignment[];
+}
+
+export default function ShiftDetailPage() {
+  const router = useRouter();
+  const params = useParams();
+  const { data: session, status } = useSession();
+  const [shift, setShift] = useState<Shift | null>(null);
+  const [availableUsers, setAvailableUsers] = useState<User[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+  const [showAssignModal, setShowAssignModal] = useState(false);
+  const [selectedUserId, setSelectedUserId] = useState('');
+  const [selectedRole, setSelectedRole] = useState<'BARTENDER' | 'BARBACK'>(
+    'BARTENDER'
+  );
+  const [selectedIsLead, setSelectedIsLead] = useState(false);
+  const [assigning, setAssigning] = useState(false);
+
+  const shiftId = params.id as string;
+  const isManager =
+    session?.user?.role === 'MANAGER' || session?.user?.role === 'SUPER_ADMIN';
+
+  useEffect(() => {
+    if (status === 'unauthenticated') {
+      router.push('/login');
+    }
+  }, [status, router]);
+
+  useEffect(() => {
+    async function fetchData() {
+      try {
+        // Fetch shift details
+        const shiftRes = await fetch(`/api/shifts/${shiftId}`);
+        if (!shiftRes.ok) {
+          throw new Error('Failed to fetch shift');
+        }
+        const shiftData = await shiftRes.json();
+        setShift(shiftData);
+
+        // Fetch available users (bartenders and barbacks)
+        const usersRes = await fetch('/api/users');
+        if (usersRes.ok) {
+          const usersData = await usersRes.json();
+          setAvailableUsers(
+            usersData.filter(
+              (u: User) => u.role === 'BARTENDER' || u.role === 'BARBACK'
+            )
+          );
+        }
+      } catch (err) {
+        setError(err instanceof Error ? err.message : 'Failed to load shift');
+      } finally {
+        setLoading(false);
+      }
+    }
+
+    if (status === 'authenticated') {
+      fetchData();
+    }
+  }, [status, shiftId]);
+
+  async function handleAssignUser() {
+    if (!selectedUserId) return;
+
+    setAssigning(true);
+    setError('');
+
+    try {
+      const response = await fetch(`/api/shifts/${shiftId}/assignments`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          userId: selectedUserId,
+          role: selectedRole,
+          isLead: selectedIsLead,
+        }),
+      });
+
+      if (!response.ok) {
+        const data = await response.json();
+        if (data.errors) {
+          // Show validation errors
+          const errorMessages = data.errors
+            .map((e: { message: string }) => e.message)
+            .join(', ');
+          throw new Error(errorMessages);
+        }
+        throw new Error(data.error || 'Failed to assign user');
+      }
+
+      // Refresh shift data
+      const shiftRes = await fetch(`/api/shifts/${shiftId}`);
+      const shiftData = await shiftRes.json();
+      setShift(shiftData);
+
+      setShowAssignModal(false);
+      setSelectedUserId('');
+      setSelectedRole('BARTENDER');
+      setSelectedIsLead(false);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to assign user');
+    } finally {
+      setAssigning(false);
+    }
+  }
+
+  async function handleRemoveAssignment(assignmentId: string) {
+    if (!confirm('Are you sure you want to remove this assignment?')) {
+      return;
+    }
+
+    try {
+      const response = await fetch(
+        `/api/shifts/${shiftId}/assignments/${assignmentId}`,
+        {
+          method: 'DELETE',
+        }
+      );
+
+      if (!response.ok) {
+        throw new Error('Failed to remove assignment');
+      }
+
+      // Refresh shift data
+      const shiftRes = await fetch(`/api/shifts/${shiftId}`);
+      const shiftData = await shiftRes.json();
+      setShift(shiftData);
+    } catch (err) {
+      alert(err instanceof Error ? err.message : 'Failed to remove assignment');
+    }
+  }
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <p className="text-muted-foreground">Loading shift...</p>
+      </div>
+    );
+  }
+
+  if (!shift) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <div className="text-center">
+          <p className="text-destructive mb-4">Shift not found</p>
+          <button
+            onClick={() => router.push('/shifts')}
+            className="btn btn-primary"
+          >
+            Back to Shifts
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  const bartenderCount = shift.assignments.filter(
+    (a) => a.role === 'BARTENDER'
+  ).length;
+  const barbackCount = shift.assignments.filter(
+    (a) => a.role === 'BARBACK'
+  ).length;
+  const leadCount = shift.assignments.filter((a) => a.isLead).length;
+
+  const isFullyStaffed =
+    bartenderCount >= shift.bartendersRequired &&
+    barbackCount >= shift.barbacksRequired &&
+    leadCount >= shift.leadsRequired;
+
+  return (
+    <div className="min-h-screen bg-background">
+      <header className="border-b border-border">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
+          <div className="flex items-center justify-between">
+            <div>
+              <h1 className="text-2xl font-bold">Shift Details</h1>
+              <p className="text-sm text-muted-foreground">
+                {shift.venue.name} -{' '}
+                {new Date(shift.date).toLocaleDateString('default', {
+                  weekday: 'long',
+                  month: 'long',
+                  day: 'numeric',
+                  year: 'numeric',
+                })}
+              </p>
+            </div>
+            <button
+              onClick={() => router.push('/shifts')}
+              className="btn btn-outline"
+            >
+              Back to Shifts
+            </button>
+          </div>
+        </div>
+      </header>
+
+      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        {/* Shift Info */}
+        <div className="card mb-6">
+          <div className="card-header">
+            <h2 className="text-xl font-semibold">Shift Information</h2>
+          </div>
+          <div className="card-content">
+            <dl className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <dt className="text-sm text-muted-foreground">Time</dt>
+                <dd className="text-lg font-medium">
+                  {shift.startTime} - {shift.endTime}
+                </dd>
+              </div>
+              <div>
+                <dt className="text-sm text-muted-foreground">Status</dt>
+                <dd>
+                  {isFullyStaffed ? (
+                    <span className="badge badge-success">Fully Staffed</span>
+                  ) : (
+                    <span className="badge badge-warning">Needs Staff</span>
+                  )}
+                </dd>
+              </div>
+              <div>
+                <dt className="text-sm text-muted-foreground">Bartenders</dt>
+                <dd className="text-lg font-medium">
+                  {bartenderCount} / {shift.bartendersRequired}
+                </dd>
+              </div>
+              <div>
+                <dt className="text-sm text-muted-foreground">Barbacks</dt>
+                <dd className="text-lg font-medium">
+                  {barbackCount} / {shift.barbacksRequired}
+                </dd>
+              </div>
+              <div>
+                <dt className="text-sm text-muted-foreground">Leads</dt>
+                <dd className="text-lg font-medium">
+                  {leadCount} / {shift.leadsRequired}
+                </dd>
+              </div>
+            </dl>
+          </div>
+        </div>
+
+        {/* Error Display */}
+        {error && (
+          <div className="alert alert-error mb-6" role="alert">
+            {error}
+          </div>
+        )}
+
+        {/* Assignments */}
+        <div className="card mb-6">
+          <div className="card-header">
+            <div className="flex items-center justify-between">
+              <h2 className="text-xl font-semibold">Staff Assignments</h2>
+              {isManager && (
+                <button
+                  onClick={() => setShowAssignModal(true)}
+                  className="btn btn-primary"
+                >
+                  Assign Staff
+                </button>
+              )}
+            </div>
+          </div>
+          <div className="card-content">
+            {shift.assignments.length === 0 ? (
+              <p className="text-muted-foreground text-center py-8">
+                No staff assigned yet
+              </p>
+            ) : (
+              <div className="space-y-2">
+                {shift.assignments.map((assignment) => (
+                  <div
+                    key={assignment.id}
+                    className="flex items-center justify-between p-3 rounded-lg border border-border hover:bg-accent"
+                  >
+                    <div className="flex-1">
+                      <div className="font-medium">{assignment.user.name}</div>
+                      <div className="text-sm text-muted-foreground">
+                        {assignment.user.email}
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <span className="badge badge-info">
+                        {assignment.role}
+                      </span>
+                      {assignment.isLead && (
+                        <span className="badge badge-success">Lead</span>
+                      )}
+                      {isManager && (
+                        <button
+                          onClick={() => handleRemoveAssignment(assignment.id)}
+                          className="btn btn-outline text-destructive hover:bg-destructive hover:text-destructive-foreground text-sm"
+                        >
+                          Remove
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Assign Modal */}
+        {showAssignModal && (
+          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+            <div className="bg-background border border-border rounded-lg p-6 max-w-md w-full mx-4">
+              <h3 className="text-xl font-semibold mb-4">Assign Staff</h3>
+
+              <div className="space-y-4">
+                <div>
+                  <label htmlFor="user" className="form-label">
+                    Select Staff Member
+                  </label>
+                  <select
+                    id="user"
+                    value={selectedUserId}
+                    onChange={(e) => setSelectedUserId(e.target.value)}
+                    className="input w-full"
+                  >
+                    <option value="">-- Select User --</option>
+                    {availableUsers.map((user) => (
+                      <option key={user.id} value={user.id}>
+                        {user.name} - {user.role}
+                        {user.isLead ? ' (Lead)' : ''}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div>
+                  <label htmlFor="role" className="form-label">
+                    Role for this Shift
+                  </label>
+                  <select
+                    id="role"
+                    value={selectedRole}
+                    onChange={(e) =>
+                      setSelectedRole(e.target.value as 'BARTENDER' | 'BARBACK')
+                    }
+                    className="input w-full"
+                  >
+                    <option value="BARTENDER">Bartender</option>
+                    <option value="BARBACK">Barback</option>
+                  </select>
+                </div>
+
+                <div className="flex items-center gap-2">
+                  <input
+                    type="checkbox"
+                    id="isLead"
+                    checked={selectedIsLead}
+                    onChange={(e) => setSelectedIsLead(e.target.checked)}
+                    className="checkbox"
+                  />
+                  <label htmlFor="isLead" className="cursor-pointer">
+                    Assign as lead for this shift
+                  </label>
+                </div>
+              </div>
+
+              <div className="flex justify-end gap-4 mt-6">
+                <button
+                  onClick={() => {
+                    setShowAssignModal(false);
+                    setError('');
+                  }}
+                  className="btn btn-outline"
+                  disabled={assigning}
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleAssignUser}
+                  className="btn btn-primary"
+                  disabled={!selectedUserId || assigning}
+                >
+                  {assigning ? 'Assigning...' : 'Assign'}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+      </main>
+    </div>
+  );
+}

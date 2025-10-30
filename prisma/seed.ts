@@ -79,8 +79,8 @@ async function main() {
   });
   console.log('✅ Created Barback:', barback.email);
 
-  // Create a test venue
-  const venue = await prisma.venue.upsert({
+  // Create test venues
+  const venue1 = await prisma.venue.upsert({
     where: { id: 'test-venue-1' },
     update: {},
     create: {
@@ -96,7 +96,58 @@ async function main() {
       },
     },
   });
-  console.log('✅ Created Venue:', venue.name);
+  console.log('✅ Created Venue:', venue1.name);
+
+  const venue2 = await prisma.venue.upsert({
+    where: { id: 'test-venue-2' },
+    update: {},
+    create: {
+      id: 'test-venue-2',
+      name: 'Rooftop Lounge',
+      isNetworked: true,
+      priority: 2,
+      availabilityDeadlineDay: 10,
+      tipPoolEnabled: true,
+      createdById: superAdmin.id,
+      managers: {
+        connect: [{ id: manager.id }],
+      },
+    },
+  });
+  console.log('✅ Created Venue:', venue2.name);
+
+  const venue3 = await prisma.venue.upsert({
+    where: { id: 'test-venue-3' },
+    update: {},
+    create: {
+      id: 'test-venue-3',
+      name: 'Speakeasy Club',
+      isNetworked: true,
+      priority: 3,
+      availabilityDeadlineDay: 10,
+      tipPoolEnabled: false,
+      createdById: superAdmin.id,
+      managers: {
+        connect: [{ id: manager.id }],
+      },
+    },
+  });
+  console.log('✅ Created Venue:', venue3.name);
+
+  const venue4 = await prisma.venue.upsert({
+    where: { id: 'test-venue-4' },
+    update: {},
+    create: {
+      id: 'test-venue-4',
+      name: 'Beachside Restaurant',
+      isNetworked: false,
+      priority: 4,
+      availabilityDeadlineDay: 15,
+      tipPoolEnabled: true,
+      createdById: superAdmin.id,
+    },
+  });
+  console.log('✅ Created Venue:', venue4.name);
 
   console.log('\n🎉 Seed completed!');
   console.log('\n📝 Test accounts:');
@@ -115,4 +166,3 @@ main()
     await prisma.$disconnect();
     process.exit(1);
   });
-
