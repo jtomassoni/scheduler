@@ -110,6 +110,11 @@ export default async function DashboardPage() {
                   </a>
                 </li>
                 <li>
+                  <a href="/trades" className="text-primary hover:underline">
+                    Shift Trades
+                  </a>
+                </li>
+                <li>
                   <a href="/profile" className="text-primary hover:underline">
                     Edit Profile
                   </a>

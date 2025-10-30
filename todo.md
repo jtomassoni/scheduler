@@ -89,26 +89,26 @@ _Last updated: 2025-10-29 UTC_
 - [ ] (NOTIF) Notify staff when override approval needed
 - [ ] (NOTIF) Notify both when override approved/declined
 
-### 🔄 Phase 7: Shift Trading (NEXT)
+### ✅ Phase 7: Shift Trading (COMPLETE)
 
-- [ ] (UI) Staff: "Trade this shift" button (mobile-optimized)
-- [ ] (UI) Select recipient from eligible staff list
-- [ ] (API) Propose trade endpoint
-- [ ] (VAL) Role compatibility check (bartender ↔ bartender, barback ↔ barback)
-- [ ] (VAL) Lead requirement check (if shift needs lead, receiver must be lead)
-- [ ] (VAL) Availability check for receiver
-- [ ] (VAL) No double-booking for receiver
-- [ ] (UI) Receiver: accept/decline trade proposal
-- [ ] (UI) Manager: approve/decline trade with reason
-- [ ] (API) Trade acceptance flow
-- [ ] (API) Manager approval endpoint
-- [ ] (UI) Trade status badges: proposed/accepted/approved/declined
+- [x] (UI) Staff: "Trade this shift" button (mobile-optimized)
+- [x] (UI) Select recipient from eligible staff list
+- [x] (API) Propose trade endpoint
+- [x] (VAL) Role compatibility check (bartender ↔ bartender, barback ↔ barback)
+- [x] (VAL) Lead requirement check (if shift needs lead, receiver must be lead)
+- [x] (VAL) Availability check for receiver
+- [x] (VAL) No double-booking for receiver
+- [x] (UI) Receiver: accept/decline trade proposal
+- [x] (UI) Manager: approve/decline trade with reason
+- [x] (API) Trade acceptance flow
+- [x] (API) Manager approval endpoint
+- [x] (UI) Trade status badges: proposed/accepted/approved/declined
 - [ ] (NOTIF) Notify receiver when trade proposed
 - [ ] (NOTIF) Notify proposer when receiver responds
 - [ ] (NOTIF) Notify manager when trade accepted (needs approval)
 - [ ] (NOTIF) Notify both users when manager approves/declines
 
-### 📥 Phase 8: External Schedule Imports
+### 🔄 Phase 8: External Schedule Imports (NEXT)
 
 - [ ] (SPEC) Define CSV format: date, start_time, end_time, description
 - [ ] (SPEC) Define JSON format: same fields as CSV
@@ -226,3 +226,13 @@ _Last updated: 2025-10-29 UTC_
 - [x] 2025-10-30 (PENDING) Shift assignment accepts overrideId to bypass validation
 - [x] 2025-10-30 (PENDING) Override status badges (pending/approved/active/declined)
 - [x] 2025-10-30 (PENDING) Validation errors include violationType for override categorization
+- [x] 2025-10-30 (PENDING) Shift trade API endpoints (GET/POST /api/trades, GET/PATCH /api/trades/[id], POST /api/trades/[id]/approve)
+- [x] 2025-10-30 (PENDING) Trade proposal with comprehensive validation (role compatibility, lead requirements, availability, double-booking)
+- [x] 2025-10-30 (PENDING) Three-step trade workflow: propose → receiver accepts → manager approves
+- [x] 2025-10-30 (PENDING) Trade list page with status filtering and role-based views
+- [x] 2025-10-30 (PENDING) Trade This Shift button on shift detail page for assigned staff
+- [x] 2025-10-30 (PENDING) Trade proposal modal with receiver selection and reason
+- [x] 2025-10-30 (PENDING) Receiver interface to accept/decline trade proposals
+- [x] 2025-10-30 (PENDING) Manager approval interface for accepted trades
+- [x] 2025-10-30 (PENDING) Automatic assignment swap when trade is approved
+- [x] 2025-10-30 (PENDING) Trade status badges (proposed/accepted/approved/declined/cancelled)

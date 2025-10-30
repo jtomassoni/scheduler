@@ -59,6 +59,10 @@ export default function ShiftDetailPage() {
   >([]);
   const [showOverrideModal, setShowOverrideModal] = useState(false);
   const [overrideReason, setOverrideReason] = useState('');
+  const [showTradeModal, setShowTradeModal] = useState(false);
+  const [selectedTradeReceiver, setSelectedTradeReceiver] = useState('');
+  const [tradeReason, setTradeReason] = useState('');
+  const [trading, setTrading] = useState(false);
 
   const shiftId = params.id as string;
   const isManager =
@@ -238,6 +242,65 @@ export default function ShiftDetailPage() {
     }
   }
 
+  async function handleProposeTradeClick() {
+    // Check if user is assigned to this shift
+    if (!shift) return;
+
+    const userAssignment = shift.assignments.find(
+      (a) => a.user.id === session?.user?.id
+    );
+
+    if (!userAssignment) {
+      alert('You are not assigned to this shift');
+      return;
+    }
+
+    setShowTradeModal(true);
+  }
+
+  async function handleProposeTrade() {
+    if (!selectedTradeReceiver) {
+      alert('Please select someone to trade with');
+      return;
+    }
+
+    setTrading(true);
+    setError('');
+
+    try {
+      const response = await fetch('/api/trades', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          shiftId,
+          receiverId: selectedTradeReceiver,
+          reason: tradeReason || null,
+        }),
+      });
+
+      if (!response.ok) {
+        const data = await response.json();
+        if (data.errors) {
+          const errorMessages = data.errors.join(', ');
+          throw new Error(errorMessages);
+        }
+        throw new Error(data.error || 'Failed to propose trade');
+      }
+
+      alert('Trade proposal sent! The other staff member will be notified.');
+      setShowTradeModal(false);
+      setSelectedTradeReceiver('');
+      setTradeReason('');
+      router.push('/trades');
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to propose trade');
+    } finally {
+      setTrading(false);
+    }
+  }
+
   if (loading) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
@@ -360,14 +423,27 @@ export default function ShiftDetailPage() {
           <div className="card-header">
             <div className="flex items-center justify-between">
               <h2 className="text-xl font-semibold">Staff Assignments</h2>
-              {isManager && (
-                <button
-                  onClick={() => setShowAssignModal(true)}
-                  className="btn btn-primary"
-                >
-                  Assign Staff
-                </button>
-              )}
+              <div className="flex gap-2">
+                {!isManager &&
+                  shift.assignments.some(
+                    (a) => a.user.id === session?.user?.id
+                  ) && (
+                    <button
+                      onClick={handleProposeTradeClick}
+                      className="btn btn-outline"
+                    >
+                      Trade This Shift
+                    </button>
+                  )}
+                {isManager && (
+                  <button
+                    onClick={() => setShowAssignModal(true)}
+                    className="btn btn-primary"
+                  >
+                    Assign Staff
+                  </button>
+                )}
+              </div>
             </div>
           </div>
           <div className="card-content">
@@ -566,6 +642,76 @@ export default function ShiftDetailPage() {
                   disabled={assigning}
                 >
                   {assigning ? 'Requesting...' : 'Request Override'}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Trade Modal */}
+        {showTradeModal && (
+          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+            <div className="bg-background border border-border rounded-lg p-6 max-w-md w-full mx-4">
+              <h3 className="text-xl font-semibold mb-4">Trade This Shift</h3>
+
+              <div className="mb-4">
+                <p className="text-sm text-muted-foreground mb-4">
+                  Select a staff member to propose this trade to. They must
+                  accept, and then a manager must approve the trade.
+                </p>
+
+                <label htmlFor="tradeReceiver" className="form-label">
+                  Trade With <span className="text-destructive">*</span>
+                </label>
+                <select
+                  id="tradeReceiver"
+                  value={selectedTradeReceiver}
+                  onChange={(e) => setSelectedTradeReceiver(e.target.value)}
+                  className="input w-full"
+                >
+                  <option value="">-- Select Staff Member --</option>
+                  {availableUsers
+                    .filter((u) => u.id !== session?.user?.id)
+                    .map((user) => (
+                      <option key={user.id} value={user.id}>
+                        {user.name} - {user.role}
+                        {user.isLead ? ' (Lead)' : ''}
+                      </option>
+                    ))}
+                </select>
+
+                <label htmlFor="tradeReason" className="form-label mt-4">
+                  Reason (Optional)
+                </label>
+                <textarea
+                  id="tradeReason"
+                  value={tradeReason}
+                  onChange={(e) => setTradeReason(e.target.value)}
+                  rows={3}
+                  className="input w-full"
+                  placeholder="Why do you want to trade this shift?"
+                />
+              </div>
+
+              <div className="flex justify-end gap-4">
+                <button
+                  onClick={() => {
+                    setShowTradeModal(false);
+                    setSelectedTradeReceiver('');
+                    setTradeReason('');
+                    setError('');
+                  }}
+                  className="btn btn-outline"
+                  disabled={trading}
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleProposeTrade}
+                  className="btn btn-primary"
+                  disabled={!selectedTradeReceiver || trading}
+                >
+                  {trading ? 'Proposing...' : 'Propose Trade'}
                 </button>
               </div>
             </div>
