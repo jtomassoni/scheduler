@@ -66,26 +66,17 @@ export default async function DashboardPage() {
               <div className="card-content">
                 <ul className="space-y-2">
                   <li>
-                    <a
-                      href="/venues"
-                      className="text-primary hover:underline"
-                    >
+                    <a href="/venues" className="text-primary hover:underline">
                       Manage Venues
                     </a>
                   </li>
                   <li>
-                    <a
-                      href="/shifts"
-                      className="text-primary hover:underline"
-                    >
+                    <a href="/shifts" className="text-primary hover:underline">
                       Schedule Shifts
                     </a>
                   </li>
                   <li>
-                    <a
-                      href="/reports"
-                      className="text-primary hover:underline"
-                    >
+                    <a href="/reports" className="text-primary hover:underline">
                       View Reports
                     </a>
                   </li>
@@ -114,6 +105,11 @@ export default async function DashboardPage() {
                   </a>
                 </li>
                 <li>
+                  <a href="/overrides" className="text-primary hover:underline">
+                    Override Requests
+                  </a>
+                </li>
+                <li>
                   <a href="/profile" className="text-primary hover:underline">
                     Edit Profile
                   </a>
@@ -126,4 +122,3 @@ export default async function DashboardPage() {
     </div>
   );
 }
-

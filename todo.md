@@ -74,22 +74,22 @@ _Last updated: 2025-10-29 UTC_
 - [ ] (NOTIF) Notify users when assigned to shifts
 - [ ] (NOTIF) Notify users when shift times change
 
-### 🔄 Phase 6: Override System (NEXT)
+### ✅ Phase 6: Override System (COMPLETE)
 
-- [ ] (UI) Override request modal: reason, violation type
-- [ ] (FLOW) Trigger override when validation fails but manager wants to proceed
-- [ ] (UI) Manager approval interface (list pending overrides)
-- [ ] (UI) Staff approval interface (approve/decline with comment)
-- [ ] (FLOW) Dual confirmation: both manager + staff must approve
-- [ ] (FLOW) Activate override only after both approvals
-- [ ] (UI) Override badges on shifts: pending/active/declined
-- [ ] (LOG) Immutable audit trail for all override actions
-- [ ] (API) Override CRUD with approval workflow
+- [x] (UI) Override request modal: reason, violation type
+- [x] (FLOW) Trigger override when validation fails but manager wants to proceed
+- [x] (UI) Manager approval interface (list pending overrides)
+- [x] (UI) Staff approval interface (approve/decline with comment)
+- [x] (FLOW) Dual confirmation: both manager + staff must approve
+- [x] (FLOW) Activate override only after both approvals
+- [x] (UI) Override badges on shifts: pending/active/declined
+- [x] (LOG) Immutable audit trail for all override actions
+- [x] (API) Override CRUD with approval workflow
 - [ ] (NOTIF) Notify manager when override requested
 - [ ] (NOTIF) Notify staff when override approval needed
 - [ ] (NOTIF) Notify both when override approved/declined
 
-### 🔄 Phase 7: Shift Trading
+### 🔄 Phase 7: Shift Trading (NEXT)
 
 - [ ] (UI) Staff: "Trade this shift" button (mobile-optimized)
 - [ ] (UI) Select recipient from eligible staff list
@@ -217,3 +217,12 @@ _Last updated: 2025-10-29 UTC_
 - [x] 2025-10-30 (PENDING) Validation: double-booking detection, day job cutoff, availability check, lead requirements
 - [x] 2025-10-30 (PENDING) Visual staffing indicators (fully staffed vs needs staff) on calendar
 - [x] 2025-10-30 (PENDING) Comprehensive error messages with actionable suggestions for validation failures
+- [x] 2025-10-30 (PENDING) Override system API endpoints (GET/POST /api/overrides, GET /api/overrides/[id], POST /api/overrides/[id]/approve)
+- [x] 2025-10-30 (PENDING) Override request modal with reason and violation type tracking
+- [x] 2025-10-30 (PENDING) Staff approval interface for override requests
+- [x] 2025-10-30 (PENDING) Manager override list page with filtering by status
+- [x] 2025-10-30 (PENDING) Dual approval workflow: manager creates, staff approves, then becomes active
+- [x] 2025-10-30 (PENDING) Immutable audit trail in override history (JSON array)
+- [x] 2025-10-30 (PENDING) Shift assignment accepts overrideId to bypass validation
+- [x] 2025-10-30 (PENDING) Override status badges (pending/approved/active/declined)
+- [x] 2025-10-30 (PENDING) Validation errors include violationType for override categorization

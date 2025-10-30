@@ -26,6 +26,7 @@ export async function POST(
     }
 
     const body = await request.json();
+    const overrideId = body.overrideId; // Optional override ID to bypass validation
 
     // Validate request body
     const validatedData = shiftAssignmentSchema.parse({
@@ -67,12 +68,51 @@ export async function POST(
       return NextResponse.json({ error: 'User not found' }, { status: 404 });
     }
 
-    // Validation checks
+    // Check if there's an active override
+    let hasActiveOverride = false;
+    if (overrideId) {
+      const override = await prisma.override.findUnique({
+        where: { id: overrideId },
+      });
+
+      if (override && override.status === 'ACTIVE') {
+        hasActiveOverride = true;
+      }
+    }
+
+    // Validation checks (skip if override is active)
     const errors: Array<{
       field: string;
       message: string;
       suggestion: string;
+      violationType?: string;
     }> = [];
+
+    // If there's an active override, skip validation checks
+    if (hasActiveOverride) {
+      // Create the assignment directly
+      const assignment = await prisma.shiftAssignment.create({
+        data: {
+          shiftId: params.id,
+          userId: validatedData.userId,
+          role: validatedData.role,
+          isLead: validatedData.isLead,
+        },
+        include: {
+          user: {
+            select: {
+              id: true,
+              name: true,
+              email: true,
+              role: true,
+              isLead: true,
+            },
+          },
+        },
+      });
+
+      return NextResponse.json(assignment, { status: 201 });
+    }
 
     // Check if user is already assigned to this shift
     const existingAssignment = shift.assignments.find(
@@ -103,6 +143,7 @@ export async function POST(
           field: 'userId',
           message: `User has a day job and is not available before ${user.dayJobCutoff}`,
           suggestion: 'Select a different user or request an override',
+          violationType: 'cutoff',
         });
       }
     }
@@ -119,6 +160,7 @@ export async function POST(
           field: 'userId',
           message: 'User marked themselves unavailable for this date',
           suggestion: 'Select a different user or request an override',
+          violationType: 'request_off',
         });
       }
     }
@@ -162,6 +204,7 @@ export async function POST(
         field: 'userId',
         message: `User is already scheduled at ${conflictingShift.shift.venue.name} on this date`,
         suggestion: 'Select a different user or change shift time',
+        violationType: 'double_booking',
       });
     }
 

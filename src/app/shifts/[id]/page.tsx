@@ -49,6 +49,16 @@ export default function ShiftDetailPage() {
   );
   const [selectedIsLead, setSelectedIsLead] = useState(false);
   const [assigning, setAssigning] = useState(false);
+  const [validationErrors, setValidationErrors] = useState<
+    Array<{
+      field: string;
+      message: string;
+      suggestion: string;
+      violationType?: string;
+    }>
+  >([]);
+  const [showOverrideModal, setShowOverrideModal] = useState(false);
+  const [overrideReason, setOverrideReason] = useState('');
 
   const shiftId = params.id as string;
   const isManager =
@@ -98,6 +108,7 @@ export default function ShiftDetailPage() {
 
     setAssigning(true);
     setError('');
+    setValidationErrors([]);
 
     try {
       const response = await fetch(`/api/shifts/${shiftId}/assignments`, {
@@ -115,11 +126,13 @@ export default function ShiftDetailPage() {
       if (!response.ok) {
         const data = await response.json();
         if (data.errors) {
-          // Show validation errors
-          const errorMessages = data.errors
-            .map((e: { message: string }) => e.message)
-            .join(', ');
-          throw new Error(errorMessages);
+          // Store validation errors and offer override option
+          setValidationErrors(data.errors);
+          setError(
+            'Validation failed. You can request an override to proceed.'
+          );
+          setAssigning(false);
+          return;
         }
         throw new Error(data.error || 'Failed to assign user');
       }
@@ -133,8 +146,67 @@ export default function ShiftDetailPage() {
       setSelectedUserId('');
       setSelectedRole('BARTENDER');
       setSelectedIsLead(false);
+      setValidationErrors([]);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to assign user');
+    } finally {
+      setAssigning(false);
+    }
+  }
+
+  async function handleRequestOverride() {
+    if (!overrideReason.trim()) {
+      alert('Please provide a reason for the override');
+      return;
+    }
+
+    setAssigning(true);
+    setError('');
+
+    try {
+      // Get the first validation error's violation type
+      const violationType =
+        validationErrors[0]?.violationType || 'double_booking';
+
+      // Create override request
+      const overrideResponse = await fetch('/api/overrides', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          shiftId,
+          userId: selectedUserId,
+          reason: overrideReason,
+          violationType,
+        }),
+      });
+
+      if (!overrideResponse.ok) {
+        throw new Error('Failed to create override request');
+      }
+
+      const override = await overrideResponse.json();
+
+      // Show success message
+      alert(
+        'Override request created. The staff member will be notified to approve or decline.'
+      );
+
+      setShowAssignModal(false);
+      setShowOverrideModal(false);
+      setSelectedUserId('');
+      setSelectedRole('BARTENDER');
+      setSelectedIsLead(false);
+      setValidationErrors([]);
+      setOverrideReason('');
+
+      // Refresh to show the override
+      router.push('/overrides');
+    } catch (err) {
+      setError(
+        err instanceof Error ? err.message : 'Failed to request override'
+      );
     } finally {
       setAssigning(false);
     }
@@ -397,11 +469,91 @@ export default function ShiftDetailPage() {
                 </div>
               </div>
 
+              {/* Validation Errors */}
+              {validationErrors.length > 0 && (
+                <div className="bg-yellow-500/10 border border-yellow-500 rounded-lg p-4 mt-4">
+                  <h4 className="font-semibold text-yellow-600 dark:text-yellow-400 mb-2">
+                    Validation Issues
+                  </h4>
+                  <ul className="space-y-1 text-sm">
+                    {validationErrors.map((err, idx) => (
+                      <li
+                        key={idx}
+                        className="text-yellow-600 dark:text-yellow-400"
+                      >
+                        • {err.message}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+
               <div className="flex justify-end gap-4 mt-6">
                 <button
                   onClick={() => {
                     setShowAssignModal(false);
                     setError('');
+                    setValidationErrors([]);
+                  }}
+                  className="btn btn-outline"
+                  disabled={assigning}
+                >
+                  Cancel
+                </button>
+                {validationErrors.length > 0 ? (
+                  <button
+                    onClick={() => setShowOverrideModal(true)}
+                    className="btn btn-warning"
+                    disabled={assigning}
+                  >
+                    Request Override
+                  </button>
+                ) : (
+                  <button
+                    onClick={handleAssignUser}
+                    className="btn btn-primary"
+                    disabled={!selectedUserId || assigning}
+                  >
+                    {assigning ? 'Assigning...' : 'Assign'}
+                  </button>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Override Request Modal */}
+        {showOverrideModal && (
+          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+            <div className="bg-background border border-border rounded-lg p-6 max-w-md w-full mx-4">
+              <h3 className="text-xl font-semibold mb-4">Request Override</h3>
+
+              <div className="mb-4">
+                <p className="text-sm text-muted-foreground mb-4">
+                  This assignment violates scheduling rules. Please provide a
+                  reason for the override. The staff member will need to approve
+                  this request.
+                </p>
+
+                <label htmlFor="overrideReason" className="form-label">
+                  Reason for Override{' '}
+                  <span className="text-destructive">*</span>
+                </label>
+                <textarea
+                  id="overrideReason"
+                  value={overrideReason}
+                  onChange={(e) => setOverrideReason(e.target.value)}
+                  rows={4}
+                  className="input w-full"
+                  placeholder="Explain why this override is necessary..."
+                />
+              </div>
+
+              <div className="flex justify-end gap-4">
+                <button
+                  onClick={() => {
+                    setShowOverrideModal(false);
+                    setOverrideReason('');
                   }}
                   className="btn btn-outline"
                   disabled={assigning}
@@ -409,11 +561,11 @@ export default function ShiftDetailPage() {
                   Cancel
                 </button>
                 <button
-                  onClick={handleAssignUser}
-                  className="btn btn-primary"
-                  disabled={!selectedUserId || assigning}
+                  onClick={handleRequestOverride}
+                  className="btn btn-warning"
+                  disabled={assigning}
                 >
-                  {assigning ? 'Assigning...' : 'Assign'}
+                  {assigning ? 'Requesting...' : 'Request Override'}
                 </button>
               </div>
             </div>
