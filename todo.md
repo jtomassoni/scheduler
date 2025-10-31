@@ -108,19 +108,19 @@ _Last updated: 2025-10-29 UTC_
 - [ ] (NOTIF) Notify manager when trade accepted (needs approval)
 - [ ] (NOTIF) Notify both users when manager approves/declines
 
-### 🔄 Phase 8: External Schedule Imports (NEXT)
+### ✅ Phase 8: External Schedule Imports (COMPLETE)
 
-- [ ] (SPEC) Define CSV format: date, start_time, end_time, description
-- [ ] (SPEC) Define JSON format: same fields as CSV
-- [ ] (UI) Import page: file upload + preview
-- [ ] (UI) Preview table: show parsed entries with validation
-- [ ] (API) Parse CSV/JSON and create ExternalBlock records
-- [ ] (VAL) Date/time validation on import
-- [ ] (VAL) Mark imported times as unavailable for scheduling
-- [ ] (UI) View/manage external blocks (list, delete)
-- [ ] (API) Manual external block creation (manager override)
+- [x] (SPEC) Define CSV format: date, start_time, end_time, description
+- [x] (SPEC) Define JSON format: same fields as CSV
+- [x] (UI) Import page: file upload + preview
+- [x] (UI) Preview table: show parsed entries with validation
+- [x] (API) Parse CSV/JSON and create ExternalBlock records
+- [x] (VAL) Date/time validation on import
+- [x] (VAL) Mark imported times as unavailable for scheduling
+- [x] (UI) View/manage external blocks (list, delete)
+- [x] (API) Manual external block creation (manager override)
 
-### 📈 Phase 9: Reports & Analytics
+### 🔄 Phase 9: Reports & Analytics (NEXT)
 
 - [ ] (UI) Monthly shift equity report
   - User name, total shifts, lead shifts, shifts by venue
@@ -236,3 +236,13 @@ _Last updated: 2025-10-29 UTC_
 - [x] 2025-10-30 (PENDING) Manager approval interface for accepted trades
 - [x] 2025-10-30 (PENDING) Automatic assignment swap when trade is approved
 - [x] 2025-10-30 (PENDING) Trade status badges (proposed/accepted/approved/declined/cancelled)
+- [x] 2025-10-31 (PENDING) External blocks API endpoints (GET/POST/DELETE /api/external-blocks)
+- [x] 2025-10-31 (PENDING) External blocks import endpoint (POST /api/external-blocks/import) supporting CSV and JSON
+- [x] 2025-10-31 (PENDING) CSV parser with header detection and validation
+- [x] 2025-10-31 (PENDING) JSON parser with array validation
+- [x] 2025-10-31 (PENDING) Import preview with data validation before saving
+- [x] 2025-10-31 (PENDING) External blocks management UI with file upload and manual paste
+- [x] 2025-10-31 (PENDING) Preview table showing parsed entries before import
+- [x] 2025-10-31 (PENDING) List view of all external blocks with delete functionality
+- [x] 2025-10-31 (PENDING) Date/time format validation (YYYY-MM-DD, HH:MM)
+- [x] 2025-10-31 (PENDING) End time must be after start time validation

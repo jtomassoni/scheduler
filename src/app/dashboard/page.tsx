@@ -100,6 +100,14 @@ export default async function DashboardPage() {
                   </a>
                 </li>
                 <li>
+                  <a
+                    href="/external-blocks"
+                    className="text-primary hover:underline"
+                  >
+                    External Schedule
+                  </a>
+                </li>
+                <li>
                   <a href="/shifts/my" className="text-primary hover:underline">
                     My Shifts
                   </a>
