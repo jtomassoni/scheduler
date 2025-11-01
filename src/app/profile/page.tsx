@@ -53,6 +53,17 @@ export default function ProfilePage() {
   const [quietHoursStart, setQuietHoursStart] = useState('22:00');
   const [quietHoursEnd, setQuietHoursEnd] = useState('08:00');
   const [venuePreferences, setVenuePreferences] = useState<string[]>([]);
+  const [defaultAvailability, setDefaultAvailability] = useState<
+    Record<string, boolean>
+  >({
+    '0': true, // Sunday
+    '1': true, // Monday
+    '2': true, // Tuesday
+    '3': true, // Wednesday
+    '4': true, // Thursday
+    '5': true, // Friday
+    '6': true, // Saturday
+  });
   const [draggedIndex, setDraggedIndex] = useState<number | null>(null);
 
   useEffect(() => {
@@ -77,6 +88,13 @@ export default function ProfilePage() {
         setHasDayJob(profileData.hasDayJob);
         setDayJobCutoff(profileData.dayJobCutoff || '');
         setAutoSubmitAvailability(profileData.autoSubmitAvailability);
+
+        // Set default availability if exists
+        if (profileData.defaultAvailability) {
+          setDefaultAvailability(
+            profileData.defaultAvailability as Record<string, boolean>
+          );
+        }
 
         if (profileData.notificationPrefs) {
           setEmailNotifications(profileData.notificationPrefs.email ?? true);
@@ -155,6 +173,7 @@ export default function ProfilePage() {
         hasDayJob,
         dayJobCutoff: hasDayJob && dayJobCutoff ? dayJobCutoff : null,
         preferredVenuesOrder: venuePreferences,
+        defaultAvailability,
         autoSubmitAvailability,
         notificationPrefs: {
           email: emailNotifications,
@@ -391,6 +410,62 @@ export default function ProfilePage() {
               </div>
             </div>
           )}
+
+          {/* Default Availability Patterns */}
+          <div className="card">
+            <div className="card-header">
+              <h2 className="text-xl font-semibold">
+                Default Availability Pattern
+              </h2>
+              <p className="text-sm text-muted-foreground mt-1">
+                Set your typical weekly availability. This will be used as the
+                default when you open a new month.
+              </p>
+            </div>
+            <div className="card-content">
+              <div className="space-y-3">
+                {[
+                  'Sunday',
+                  'Monday',
+                  'Tuesday',
+                  'Wednesday',
+                  'Thursday',
+                  'Friday',
+                  'Saturday',
+                ].map((day, index) => (
+                  <div key={day} className="flex items-center gap-3">
+                    <input
+                      type="checkbox"
+                      id={`default-${day}`}
+                      checked={defaultAvailability[index.toString()] ?? true}
+                      onChange={(e) => {
+                        setDefaultAvailability({
+                          ...defaultAvailability,
+                          [index.toString()]: e.target.checked,
+                        });
+                      }}
+                      className="checkbox"
+                    />
+                    <label
+                      htmlFor={`default-${day}`}
+                      className="cursor-pointer flex-1"
+                    >
+                      {day}
+                    </label>
+                    <span className="text-sm text-muted-foreground">
+                      {(defaultAvailability[index.toString()] ?? true)
+                        ? 'Available'
+                        : 'Unavailable'}
+                    </span>
+                  </div>
+                ))}
+              </div>
+              <p className="text-xs text-muted-foreground mt-4">
+                When you view availability for a new month, these defaults will
+                be pre-filled. You can still change individual days.
+              </p>
+            </div>
+          </div>
 
           {/* Availability Settings */}
           <div className="card">

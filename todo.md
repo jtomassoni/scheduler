@@ -28,7 +28,7 @@ _Last updated: 2025-10-29 UTC_
 - [x] (UI) Lead status indicator
 - [x] (UI) Drag-and-drop venue preference ordering
 - [x] (API) Profile update endpoints with role restrictions
-- [ ] (UI) Default availability patterns
+- [x] (UI) Default availability patterns
 - [x] (UI) Auto-submit toggle for availability
 - [x] (UI) Notification preferences + quiet hours
 
