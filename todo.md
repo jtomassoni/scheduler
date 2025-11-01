@@ -46,7 +46,7 @@ _Last updated: 2025-10-29 UTC_
 
 - [x] (UI) Month calendar picker (next month view by default)
 - [x] (UI) Quick actions: select all available/unavailable, weekends, etc.
-- [ ] (UI) Venue-specific deadline indicator (e.g., "Due by Nov 10")
+- [x] (UI) Venue-specific deadline indicator (e.g., "Due by Nov 10")
 - [x] (API) Save/retrieve availability by user + month
 - [ ] (LOGIC) Auto-submit defaults on deadline (if enabled)
 - [x] (LOCK) Lock availability after deadline

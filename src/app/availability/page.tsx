@@ -33,6 +33,9 @@ export default function AvailabilityPage() {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
+  const [venues, setVenues] = useState<
+    Array<{ id: string; name: string; availabilityDeadlineDay: number }>
+  >([]);
 
   useEffect(() => {
     if (status === 'unauthenticated') {
@@ -74,6 +77,17 @@ export default function AvailabilityPage() {
           });
         }
         setSelectedDates(dates);
+
+        // Fetch venues for deadline info
+        try {
+          const venuesResponse = await fetch('/api/venues');
+          if (venuesResponse.ok) {
+            const venuesData = await venuesResponse.json();
+            setVenues(venuesData);
+          }
+        } catch {
+          // Silently fail - venues are optional for availability
+        }
       } catch (err) {
         setError(
           err instanceof Error ? err.message : 'Failed to load availability'
@@ -319,6 +333,53 @@ export default function AvailabilityPage() {
             <span className="badge badge-warning">Draft</span>
           )}
         </div>
+
+        {/* Venue Deadline Indicators */}
+        {venues.length > 0 && !isLocked && (
+          <div className="card mb-6">
+            <div className="card-header">
+              <h3 className="font-semibold">Venue Deadlines</h3>
+              <p className="text-sm text-muted-foreground mt-1">
+                Submit your availability before these dates
+              </p>
+            </div>
+            <div className="card-content">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                {venues.map((venue) => {
+                  const [year, monthNum] = currentMonth.split('-').map(Number);
+                  const deadlineDate = new Date(
+                    year,
+                    monthNum - 1,
+                    venue.availabilityDeadlineDay
+                  );
+                  const isPast = new Date() > deadlineDate;
+
+                  return (
+                    <div
+                      key={venue.id}
+                      className={`p-3 rounded-lg border ${
+                        isPast
+                          ? 'border-error/50 bg-error/10'
+                          : 'border-warning/50 bg-warning/10'
+                      }`}
+                    >
+                      <div className="font-medium">{venue.name}</div>
+                      <div
+                        className={`text-sm mt-1 ${
+                          isPast ? 'text-error' : 'text-warning'
+                        }`}
+                      >
+                        {isPast
+                          ? 'Past due'
+                          : `Due by ${monthName} ${venue.availabilityDeadlineDay}`}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Quick Actions */}
         {!isLocked && (
