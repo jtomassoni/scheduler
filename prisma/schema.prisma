@@ -133,12 +133,17 @@ model Shift {
   bartendersRequired Int @default(1)
   barbacksRequired   Int @default(0)
   leadsRequired      Int @default(0)
-
+  
+  // Tip pool publishing
+  tipsPublished   Boolean  @default(false)
+  tipsPublishedAt DateTime?
+  tipsPublishedBy String?
+  
   // Relations
   assignments ShiftAssignment[]
   overrides   Override[]
   trades      ShiftTrade[]
-
+  
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 

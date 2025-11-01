@@ -33,7 +33,10 @@ export async function GET(request: NextRequest) {
 
     // Build where clause
     const where: {
-      shift: { date: { gte: Date; lte: Date } };
+      shift: {
+        date: { gte: Date; lte: Date };
+        tipsPublished?: boolean;
+      };
       userId?: string;
       tipAmount?: { not: null };
     } = {
@@ -42,6 +45,8 @@ export async function GET(request: NextRequest) {
           gte: new Date(startDate),
           lte: new Date(endDate),
         },
+        // Staff can only see published tips, managers can see all
+        ...(isManagerRole ? {} : { tipsPublished: true }),
       },
       tipAmount: {
         not: null,

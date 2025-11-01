@@ -30,6 +30,9 @@ interface Shift {
   bartendersRequired: number;
   barbacksRequired: number;
   leadsRequired: number;
+  tipsPublished: boolean;
+  tipsPublishedAt?: string | null;
+  tipsPublishedBy?: string | null;
   venue: {
     id: string;
     name: string;
@@ -70,6 +73,7 @@ export default function ShiftDetailPage() {
   const [showTipModal, setShowTipModal] = useState(false);
   const [tipAmounts, setTipAmounts] = useState<Record<string, string>>({});
   const [savingTips, setSavingTips] = useState(false);
+  const [publishingTips, setPublishingTips] = useState(false);
 
   const shiftId = params.id as string;
   const isManager =
@@ -358,6 +362,32 @@ export default function ShiftDetailPage() {
     }
   }
 
+  async function handlePublishTips() {
+    if (!shift) return;
+
+    setPublishingTips(true);
+    setError('');
+
+    try {
+      const response = await fetch(`/api/shifts/${shiftId}/tips/publish`, {
+        method: 'POST',
+      });
+
+      if (!response.ok) {
+        const data = await response.json();
+        throw new Error(data.error || 'Failed to publish tips');
+      }
+
+      const result = await response.json();
+      setShift({ ...shift, ...result.shift });
+      alert('Tips published successfully! Staff have been notified.');
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to publish tips');
+    } finally {
+      setPublishingTips(false);
+    }
+  }
+
   if (loading) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
@@ -496,12 +526,35 @@ export default function ShiftDetailPage() {
                   <>
                     {shift.venue.tipPoolEnabled &&
                       shift.assignments.length > 0 && (
-                        <button
-                          onClick={handleOpenTipModal}
-                          className="btn btn-outline"
-                        >
-                          Enter Tips
-                        </button>
+                        <>
+                          <button
+                            onClick={handleOpenTipModal}
+                            className="btn btn-outline"
+                          >
+                            Enter Tips
+                          </button>
+                          {shift.assignments.some(
+                            (a) =>
+                              a.tipAmount !== null && a.tipAmount !== undefined
+                          ) &&
+                            !shift.tipsPublished && (
+                              <button
+                                onClick={handlePublishTips}
+                                className="btn btn-primary"
+                                disabled={publishingTips}
+                                title="Publish tips to make them visible to staff"
+                              >
+                                {publishingTips
+                                  ? 'Publishing...'
+                                  : 'Publish Tips'}
+                              </button>
+                            )}
+                          {shift.tipsPublished && (
+                            <span className="badge badge-success">
+                              Tips Published
+                            </span>
+                          )}
+                        </>
                       )}
                     <button
                       onClick={() => setShowAssignModal(true)}
