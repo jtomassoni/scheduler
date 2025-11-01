@@ -57,6 +57,24 @@ export async function GET(request: NextRequest) {
       },
     });
 
+    // Check if manager has unlocked this availability
+    const unlock = await prisma.availabilityUnlock.findUnique({
+      where: {
+        userId_month: {
+          userId,
+          month,
+        },
+      },
+      include: {
+        manager: {
+          select: {
+            id: true,
+            name: true,
+          },
+        },
+      },
+    });
+
     if (!availability) {
       // Return empty availability if not found
       return NextResponse.json({
@@ -66,10 +84,18 @@ export async function GET(request: NextRequest) {
         submittedAt: null,
         lockedAt: null,
         isLocked: false,
+        unlock: unlock || null,
       });
     }
 
-    return NextResponse.json(availability);
+    // If unlocked, override isLocked to false
+    const effectivelyLocked = availability.isLocked && !unlock;
+
+    return NextResponse.json({
+      ...availability,
+      isLocked: effectivelyLocked,
+      unlock: unlock || null,
+    });
   } catch (error) {
     console.error('Error fetching availability:', error);
     return NextResponse.json(

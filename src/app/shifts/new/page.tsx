@@ -61,6 +61,28 @@ export default function NewShiftPage() {
     }
   }, [status]);
 
+  // Keyboard shortcuts
+  useEffect(() => {
+    function handleKeyDown(e: KeyboardEvent) {
+      // Escape to cancel
+      if (e.key === 'Escape') {
+        router.push('/shifts');
+      }
+
+      // Cmd/Ctrl+Enter to submit
+      if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') {
+        e.preventDefault();
+        const form = document.querySelector('form');
+        if (form && !saving) {
+          form.requestSubmit();
+        }
+      }
+    }
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [router, saving]);
+
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setSaving(true);
@@ -114,6 +136,17 @@ export default function NewShiftPage() {
               <h1 className="text-2xl font-bold">Create Shift</h1>
               <p className="text-sm text-muted-foreground">
                 Add a new shift to the schedule
+              </p>
+              <p className="text-xs text-muted-foreground mt-1 hidden lg:block">
+                Keyboard shortcuts:{' '}
+                <kbd className="px-1.5 py-0.5 text-xs font-semibold bg-muted rounded border border-border">
+                  Esc
+                </kbd>{' '}
+                to cancel,{' '}
+                <kbd className="px-1.5 py-0.5 text-xs font-semibold bg-muted rounded border border-border">
+                  {navigator.platform.includes('Mac') ? '⌘' : 'Ctrl'}+Enter
+                </kbd>{' '}
+                to submit
               </p>
             </div>
             <button

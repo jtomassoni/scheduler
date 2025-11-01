@@ -17,6 +17,16 @@ interface AvailabilityData {
   submittedAt: string | null;
   lockedAt: string | null;
   isLocked: boolean;
+  unlock?: {
+    id: string;
+    unlockedBy: string;
+    unlockedAt: string;
+    reason?: string;
+    manager: {
+      id: string;
+      name: string;
+    };
+  } | null;
 }
 
 export default function AvailabilityPage() {
@@ -36,6 +46,9 @@ export default function AvailabilityPage() {
   const [venues, setVenues] = useState<
     Array<{ id: string; name: string; availabilityDeadlineDay: number }>
   >([]);
+  const [showUnlockModal, setShowUnlockModal] = useState(false);
+  const [unlockReason, setUnlockReason] = useState('');
+  const [unlocking, setUnlocking] = useState(false);
 
   useEffect(() => {
     if (status === 'unauthenticated') {
@@ -51,52 +64,52 @@ export default function AvailabilityPage() {
     setCurrentMonth(monthStr);
   }, []);
 
-  useEffect(() => {
-    async function fetchAvailability() {
-      if (!currentMonth) return;
+  async function fetchAvailability() {
+    if (!currentMonth) return;
 
-      try {
-        const response = await fetch(`/api/availability?month=${currentMonth}`);
-        if (!response.ok) {
-          throw new Error('Failed to fetch availability');
-        }
-        const data = await response.json();
-        setAvailability(data);
-
-        // Initialize selected dates
-        const dates: Record<string, boolean> = {};
-        if (data.data && typeof data.data === 'object') {
-          Object.entries(data.data).forEach(([dateStr, info]) => {
-            if (
-              typeof info === 'object' &&
-              info !== null &&
-              'available' in info
-            ) {
-              dates[dateStr] = (info as { available: boolean }).available;
-            }
-          });
-        }
-        setSelectedDates(dates);
-
-        // Fetch venues for deadline info
-        try {
-          const venuesResponse = await fetch('/api/venues');
-          if (venuesResponse.ok) {
-            const venuesData = await venuesResponse.json();
-            setVenues(venuesData);
-          }
-        } catch {
-          // Silently fail - venues are optional for availability
-        }
-      } catch (err) {
-        setError(
-          err instanceof Error ? err.message : 'Failed to load availability'
-        );
-      } finally {
-        setLoading(false);
+    try {
+      const response = await fetch(`/api/availability?month=${currentMonth}`);
+      if (!response.ok) {
+        throw new Error('Failed to fetch availability');
       }
-    }
+      const data = await response.json();
+      setAvailability(data);
 
+      // Initialize selected dates
+      const dates: Record<string, boolean> = {};
+      if (data.data && typeof data.data === 'object') {
+        Object.entries(data.data).forEach(([dateStr, info]) => {
+          if (
+            typeof info === 'object' &&
+            info !== null &&
+            'available' in info
+          ) {
+            dates[dateStr] = (info as { available: boolean }).available;
+          }
+        });
+      }
+      setSelectedDates(dates);
+
+      // Fetch venues for deadline info
+      try {
+        const venuesResponse = await fetch('/api/venues');
+        if (venuesResponse.ok) {
+          const venuesData = await venuesResponse.json();
+          setVenues(venuesData);
+        }
+      } catch {
+        // Silently fail - venues are optional for availability
+      }
+    } catch (err) {
+      setError(
+        err instanceof Error ? err.message : 'Failed to load availability'
+      );
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  useEffect(() => {
     if (status === 'authenticated' && currentMonth) {
       fetchAvailability();
     }
@@ -163,6 +176,73 @@ export default function AvailabilityPage() {
       }
     });
     setSelectedDates(newDates);
+  }
+
+  async function handleUnlock() {
+    if (!session?.user?.id || !availability) return;
+
+    setUnlocking(true);
+    setError('');
+    setSuccess('');
+
+    try {
+      const response = await fetch('/api/availability/unlock', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          userId: session.user.id,
+          month: currentMonth,
+          reason: unlockReason,
+        }),
+      });
+
+      if (!response.ok) {
+        const data = await response.json();
+        throw new Error(data.error || 'Failed to unlock availability');
+      }
+
+      setSuccess('Availability unlocked successfully');
+      setShowUnlockModal(false);
+      setUnlockReason('');
+      // Reload availability
+      await fetchAvailability();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to unlock');
+    } finally {
+      setUnlocking(false);
+    }
+  }
+
+  async function handleLock() {
+    if (!session?.user?.id || !availability) return;
+
+    setUnlocking(true);
+    setError('');
+    setSuccess('');
+
+    try {
+      const response = await fetch(
+        `/api/availability/unlock?userId=${session.user.id}&month=${currentMonth}`,
+        {
+          method: 'DELETE',
+        }
+      );
+
+      if (!response.ok) {
+        const data = await response.json();
+        throw new Error(data.error || 'Failed to lock availability');
+      }
+
+      setSuccess('Availability locked');
+      // Reload availability
+      await fetchAvailability();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to lock');
+    } finally {
+      setUnlocking(false);
+    }
   }
 
   async function handleSave() {
@@ -324,13 +404,44 @@ export default function AvailabilityPage() {
         </div>
 
         {/* Status Badges */}
-        <div className="flex gap-2 mb-6">
+        <div className="flex gap-2 mb-6 flex-wrap items-center">
           {isLocked && <span className="badge badge-error">Locked</span>}
           {isSubmitted && !isLocked && (
             <span className="badge badge-success">Submitted</span>
           )}
           {!isSubmitted && !isLocked && (
             <span className="badge badge-warning">Draft</span>
+          )}
+
+          {/* Unlock Status */}
+          {availability?.unlock && (
+            <span className="badge badge-info">
+              Unlocked by {availability.unlock.manager.name}
+            </span>
+          )}
+
+          {/* Manager Unlock/Lock Buttons */}
+          {(session?.user?.role === 'MANAGER' ||
+            session?.user?.role === 'SUPER_ADMIN') && (
+            <div className="ml-auto flex gap-2">
+              {availability?.unlock ? (
+                <button
+                  onClick={handleLock}
+                  disabled={unlocking}
+                  className="btn btn-sm btn-outline"
+                >
+                  {unlocking ? 'Locking...' : 'Re-Lock'}
+                </button>
+              ) : availability?.lockedAt ? (
+                <button
+                  onClick={() => setShowUnlockModal(true)}
+                  disabled={unlocking}
+                  className="btn btn-sm btn-primary"
+                >
+                  Unlock Availability
+                </button>
+              ) : null}
+            </div>
           )}
         </div>
 
@@ -507,6 +618,55 @@ export default function AvailabilityPage() {
           </div>
         )}
       </main>
+
+      {/* Unlock Modal */}
+      {showUnlockModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-background border border-border rounded-lg p-6 max-w-md w-full">
+            <h3 className="text-xl font-semibold mb-4">Unlock Availability</h3>
+
+            <p className="text-sm text-muted-foreground mb-4">
+              This will allow the staff member to edit their availability for{' '}
+              {new Date(currentMonth + '-01').toLocaleDateString('en-US', {
+                month: 'long',
+                year: 'numeric',
+              })}
+              , even though the deadline has passed.
+            </p>
+
+            <div className="mb-4">
+              <label className="form-label">Reason (optional)</label>
+              <textarea
+                value={unlockReason}
+                onChange={(e) => setUnlockReason(e.target.value)}
+                className="input w-full"
+                rows={3}
+                placeholder="E.g., Emergency schedule change required"
+              />
+            </div>
+
+            <div className="flex justify-end gap-4">
+              <button
+                onClick={() => {
+                  setShowUnlockModal(false);
+                  setUnlockReason('');
+                }}
+                className="btn btn-outline"
+                disabled={unlocking}
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleUnlock}
+                className="btn btn-primary"
+                disabled={unlocking}
+              >
+                {unlocking ? 'Unlocking...' : 'Unlock'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

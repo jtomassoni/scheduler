@@ -73,6 +73,20 @@ export default function ShiftsPage() {
     setCurrentDate(startOfWeek.toISOString().split('T')[0]);
   }, []);
 
+  // Keyboard shortcuts
+  useEffect(() => {
+    function handleKeyDown(e: KeyboardEvent) {
+      // Cmd/Ctrl+N to create new shift (only for managers)
+      if ((e.metaKey || e.ctrlKey) && e.key === 'n' && isManager) {
+        e.preventDefault();
+        router.push('/shifts/new');
+      }
+    }
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [router, isManager]);
+
   useEffect(() => {
     async function fetchVenues() {
       try {
@@ -214,8 +228,12 @@ export default function ShiftsPage() {
               <button
                 onClick={() => router.push('/shifts/new')}
                 className="btn btn-primary"
+                title="Press Cmd/Ctrl+N to create a new shift"
               >
                 Create Shift
+                <span className="hidden lg:inline ml-2 text-xs opacity-70">
+                  ({navigator.platform.includes('Mac') ? '⌘' : 'Ctrl'}+N)
+                </span>
               </button>
               <button
                 onClick={() => router.push('/dashboard')}

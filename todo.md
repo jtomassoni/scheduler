@@ -39,7 +39,7 @@ _Last updated: 2025-10-29 UTC_
 - [x] (UI) Edit venue (name, networked, priority, deadline day, tip pool)
 - [x] (UI) Assign/remove managers (Super Admin only)
 - [x] (API) Venue CRUD with authorization
-- [ ] (API) Manager invite flow (email + onboarding)
+- [ ] (API) Manager invite flow (email + onboarding) (REQUIRES EMAIL INFRASTRUCTURE)
 - [x] (VAL) Prevent deletion of venues with active shifts
 
 ### ✅ Phase 4: Availability System (COMPLETE)
@@ -48,10 +48,10 @@ _Last updated: 2025-10-29 UTC_
 - [x] (UI) Quick actions: select all available/unavailable, weekends, etc.
 - [x] (UI) Venue-specific deadline indicator (e.g., "Due by Nov 10")
 - [x] (API) Save/retrieve availability by user + month
-- [ ] (LOGIC) Auto-submit defaults on deadline (if enabled)
+- [ ] (LOGIC) Auto-submit defaults on deadline (if enabled) (REQUIRES CRON)
 - [x] (LOCK) Lock availability after deadline
-- [ ] (API) Manager override to unlock availability
-- [ ] (NOTIF) Reminders at T-7, T-3, T-1 days before deadline
+- [x] (API) Manager override to unlock availability
+- [ ] (NOTIF) Reminders at T-7, T-3, T-1 days before deadline (REQUIRES CRON)
 - [x] (VAL) Prevent scheduling users with unavailable dates
 
 ### ✅ Phase 5: Shift Management & Scheduling (COMPLETE)
@@ -154,9 +154,9 @@ _Last updated: 2025-10-29 UTC_
 - [x] (UI) Notification bell icon with unread count
 - [x] (UI) Notification dropdown/page with list
 - [x] (LOGIC) Respect quiet hours (no push during quiet time, queue for email)
-- [ ] (LOGIC) Push → email fallback if push fails
-- [ ] (EMAIL) Email notification templates
-- [ ] (PUSH) Web push notification setup (service worker)
+- [ ] (LOGIC) Push → email fallback if push fails (REQUIRES PUSH/EMAIL INFRASTRUCTURE)
+- [ ] (EMAIL) Email notification templates (REQUIRES EMAIL INFRASTRUCTURE)
+- [ ] (PUSH) Web push notification setup (service worker) (REQUIRES PUSH INFRASTRUCTURE)
 - [x] ✅ (DB) All notification types already defined
 
 ### ✅ Phase 12: Mobile & Desktop Optimization (COMPLETE - Ongoing)
@@ -167,7 +167,7 @@ _Last updated: 2025-10-29 UTC_
 - [x] (MOBILE) Bottom navigation for staff views
 - [x] (DESKTOP) Optimize scheduler grid for large screens
 - [x] (DESKTOP) Multi-column layouts for reports
-- [ ] (DESKTOP) Keyboard shortcuts for shift creation
+- [x] (DESKTOP) Keyboard shortcuts for shift creation
 - [x] (RESPONSIVE) Test all flows on mobile/tablet/desktop
 
 ---
