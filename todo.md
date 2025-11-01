@@ -133,20 +133,20 @@ _Last updated: 2025-10-29 UTC_
 - [x] (API) Report generation endpoints with date ranges
 - [x] (UI) Export reports as CSV/PDF
 
-### 🔄 Phase 10: Tip Pool (NEXT - Optional)
+### ✅ Phase 10: Tip Pool (COMPLETE - Optional)
 
-- [ ] (UI) Manager: tip entry form per shift assignment
-- [ ] (UI) Manager: bulk tip entry for entire shift
-- [ ] (API) Tip payout create/update endpoints (manager only)
-- [ ] (LOG) Track edit history: who changed amount, when, old/new value
-- [ ] (UI) Staff: read-only tip view (by shift, by month total)
+- [x] (UI) Manager: tip entry form per shift assignment
+- [x] (UI) Manager: bulk tip entry for entire shift
+- [x] (API) Tip payout create/update endpoints (manager only)
+- [x] (LOG) Track edit history: who changed amount, when, old/new value
+- [x] (UI) Staff: read-only tip view (by shift, by month total)
 - [ ] (UI) Pending badge: tips entered but not yet published
 - [ ] (API) "Publish tips" action (makes visible to staff)
 - [ ] (NOTIF) Notify staff when tips published
 - [ ] (NOTIF) Notify staff when tips updated
 - [ ] (ERR-UX) "Missing tip entry" → suggest: draft amount + alert manager
 
-### 🔔 Phase 11: Notification System (Ongoing)
+### 🔔 Phase 11: Notification System (NEXT - Ongoing)
 
 - [ ] (API) Notification creation service
 - [ ] (API) Mark notification as read
@@ -256,3 +256,12 @@ _Last updated: 2025-10-29 UTC_
 - [x] 2025-10-31 (PENDING) Export to CSV functionality for all report types
 - [x] 2025-10-31 (PENDING) Manager-only access with role-based authorization
 - [x] 2025-10-31 (PENDING) Date range defaults to current month
+- [x] 2025-10-31 (PENDING) Tip entry modal in shift detail page for managers
+- [x] 2025-10-31 (PENDING) Bulk tip entry API endpoint with validation
+- [x] 2025-10-31 (PENDING) Tip pool enabled check per venue
+- [x] 2025-10-31 (PENDING) Tip amount display in staff assignment list
+- [x] 2025-10-31 (PENDING) Tip history API endpoint with date range filtering
+- [x] 2025-10-31 (PENDING) My Tips page for staff with summary cards
+- [x] 2025-10-31 (PENDING) Total tips, average tip, and shift count calculations
+- [x] 2025-10-31 (PENDING) Tip history table with venue and date information
+- [x] 2025-10-31 (PENDING) Dashboard link to My Tips page

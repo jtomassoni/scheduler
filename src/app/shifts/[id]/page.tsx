@@ -17,6 +17,9 @@ interface ShiftAssignment {
   user: User;
   role: string;
   isLead: boolean;
+  tipAmount?: number | null;
+  tipEnteredAt?: string | null;
+  tipUpdatedAt?: string | null;
 }
 
 interface Shift {
@@ -30,6 +33,7 @@ interface Shift {
   venue: {
     id: string;
     name: string;
+    tipPoolEnabled: boolean;
   };
   assignments: ShiftAssignment[];
 }
@@ -63,6 +67,9 @@ export default function ShiftDetailPage() {
   const [selectedTradeReceiver, setSelectedTradeReceiver] = useState('');
   const [tradeReason, setTradeReason] = useState('');
   const [trading, setTrading] = useState(false);
+  const [showTipModal, setShowTipModal] = useState(false);
+  const [tipAmounts, setTipAmounts] = useState<Record<string, string>>({});
+  const [savingTips, setSavingTips] = useState(false);
 
   const shiftId = params.id as string;
   const isManager =
@@ -301,6 +308,56 @@ export default function ShiftDetailPage() {
     }
   }
 
+  function handleOpenTipModal() {
+    if (!shift) return;
+
+    // Initialize tip amounts with existing values
+    const initialAmounts: Record<string, string> = {};
+    shift.assignments.forEach((assignment) => {
+      initialAmounts[assignment.id] = assignment.tipAmount
+        ? String(assignment.tipAmount)
+        : '';
+    });
+    setTipAmounts(initialAmounts);
+    setShowTipModal(true);
+  }
+
+  async function handleSaveTips() {
+    if (!shift) return;
+
+    setSavingTips(true);
+    setError('');
+
+    try {
+      const tips = shift.assignments.map((assignment) => ({
+        assignmentId: assignment.id,
+        amount: parseFloat(tipAmounts[assignment.id] || '0'),
+      }));
+
+      const response = await fetch(`/api/shifts/${shiftId}/tips`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ tips }),
+      });
+
+      if (!response.ok) {
+        const data = await response.json();
+        throw new Error(data.error || 'Failed to save tips');
+      }
+
+      const result = await response.json();
+      setShift({ ...shift, assignments: result.assignments });
+      alert('Tips saved successfully!');
+      setShowTipModal(false);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to save tips');
+    } finally {
+      setSavingTips(false);
+    }
+  }
+
   if (loading) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
@@ -436,12 +493,23 @@ export default function ShiftDetailPage() {
                     </button>
                   )}
                 {isManager && (
-                  <button
-                    onClick={() => setShowAssignModal(true)}
-                    className="btn btn-primary"
-                  >
-                    Assign Staff
-                  </button>
+                  <>
+                    {shift.venue.tipPoolEnabled &&
+                      shift.assignments.length > 0 && (
+                        <button
+                          onClick={handleOpenTipModal}
+                          className="btn btn-outline"
+                        >
+                          Enter Tips
+                        </button>
+                      )}
+                    <button
+                      onClick={() => setShowAssignModal(true)}
+                      className="btn btn-primary"
+                    >
+                      Assign Staff
+                    </button>
+                  </>
                 )}
               </div>
             </div>
@@ -463,6 +531,11 @@ export default function ShiftDetailPage() {
                       <div className="text-sm text-muted-foreground">
                         {assignment.user.email}
                       </div>
+                      {shift.venue.tipPoolEnabled && assignment.tipAmount && (
+                        <div className="text-sm text-success mt-1">
+                          Tip: ${Number(assignment.tipAmount).toFixed(2)}
+                        </div>
+                      )}
                     </div>
                     <div className="flex items-center gap-2">
                       <span className="badge badge-info">
@@ -712,6 +785,87 @@ export default function ShiftDetailPage() {
                   disabled={!selectedTradeReceiver || trading}
                 >
                   {trading ? 'Proposing...' : 'Propose Trade'}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Tip Entry Modal */}
+        {showTipModal && (
+          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+            <div className="bg-background border border-border rounded-lg p-6 max-w-2xl w-full mx-4 max-h-[80vh] overflow-y-auto">
+              <h3 className="text-xl font-semibold mb-4">Enter Tips</h3>
+
+              <div className="mb-4">
+                <p className="text-sm text-muted-foreground mb-4">
+                  Enter tip amounts for each staff member who worked this shift.
+                </p>
+
+                <div className="space-y-3">
+                  {shift?.assignments.map((assignment) => (
+                    <div
+                      key={assignment.id}
+                      className="flex items-center gap-3 p-3 rounded-lg border border-border bg-card"
+                    >
+                      <div className="flex-1">
+                        <p className="font-medium">{assignment.user.name}</p>
+                        <p className="text-sm text-muted-foreground">
+                          {assignment.role}
+                          {assignment.isLead && ' (Lead)'}
+                        </p>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <span className="text-muted-foreground">$</span>
+                        <input
+                          type="number"
+                          min="0"
+                          step="0.01"
+                          value={tipAmounts[assignment.id] || ''}
+                          onChange={(e) =>
+                            setTipAmounts({
+                              ...tipAmounts,
+                              [assignment.id]: e.target.value,
+                            })
+                          }
+                          className="input w-32"
+                          placeholder="0.00"
+                        />
+                      </div>
+                    </div>
+                  ))}
+                </div>
+
+                <div className="mt-4 p-3 rounded-lg bg-accent">
+                  <div className="flex justify-between items-center">
+                    <span className="font-semibold">Total:</span>
+                    <span className="text-xl font-bold">
+                      $
+                      {Object.values(tipAmounts)
+                        .reduce((sum, val) => sum + (parseFloat(val) || 0), 0)
+                        .toFixed(2)}
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              <div className="flex justify-end gap-4">
+                <button
+                  onClick={() => {
+                    setShowTipModal(false);
+                    setError('');
+                  }}
+                  className="btn btn-outline"
+                  disabled={savingTips}
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleSaveTips}
+                  className="btn btn-primary"
+                  disabled={savingTips}
+                >
+                  {savingTips ? 'Saving...' : 'Save Tips'}
                 </button>
               </div>
             </div>

@@ -123,6 +123,11 @@ export default async function DashboardPage() {
                   </a>
                 </li>
                 <li>
+                  <a href="/tips" className="text-primary hover:underline">
+                    My Tips
+                  </a>
+                </li>
+                <li>
                   <a href="/profile" className="text-primary hover:underline">
                     Edit Profile
                   </a>
