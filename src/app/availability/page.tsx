@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { useSession } from 'next-auth/react';
 
@@ -64,7 +64,7 @@ export default function AvailabilityPage() {
     setCurrentMonth(monthStr);
   }, []);
 
-  async function fetchAvailability() {
+  const fetchAvailability = useCallback(async () => {
     if (!currentMonth) return;
 
     try {
@@ -107,13 +107,13 @@ export default function AvailabilityPage() {
     } finally {
       setLoading(false);
     }
-  }
+  }, [currentMonth]);
 
   useEffect(() => {
     if (status === 'authenticated' && currentMonth) {
       fetchAvailability();
     }
-  }, [status, currentMonth]);
+  }, [status, currentMonth, fetchAvailability]);
 
   function getDaysInMonth(month: string): Date[] {
     const [year, monthNum] = month.split('-').map(Number);

@@ -42,7 +42,7 @@ export function calculateDuration(startTime: string, endTime: string): number {
   const [startHours, startMinutes] = startTime.split(':').map(Number);
   const [endHours, endMinutes] = endTime.split(':').map(Number);
 
-  let startTotalMinutes = startHours * 60 + startMinutes;
+  const startTotalMinutes = startHours * 60 + startMinutes;
   let endTotalMinutes = endHours * 60 + endMinutes;
 
   // Handle overnight shifts
@@ -104,4 +104,3 @@ export function debounce<T extends (...args: unknown[]) => unknown>(
 export function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
-
