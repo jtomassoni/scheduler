@@ -505,6 +505,46 @@ export default function ShiftDetailPage() {
           </div>
         )}
 
+        {/* Missing Tip Entry Warning */}
+        {isManager &&
+          shift.venue.tipPoolEnabled &&
+          shift.assignments.length > 0 &&
+          !shift.tipsPublished &&
+          (() => {
+            const assignmentsWithoutTips = shift.assignments.filter(
+              (a) => a.tipAmount === null || a.tipAmount === undefined
+            );
+            return assignmentsWithoutTips.length > 0 ? (
+              <div className="alert alert-warning mb-6" role="alert">
+                <div className="flex items-start gap-3">
+                  <span className="text-xl">⚠️</span>
+                  <div className="flex-1">
+                    <p className="font-semibold mb-1">Missing Tip Entries</p>
+                    <p className="text-sm mb-2">
+                      {assignmentsWithoutTips.length} assignment
+                      {assignmentsWithoutTips.length !== 1 ? 's' : ''} still
+                      need tip amounts entered:
+                    </p>
+                    <ul className="text-sm list-disc list-inside mb-3 space-y-1">
+                      {assignmentsWithoutTips.map((assignment) => (
+                        <li key={assignment.id}>
+                          {assignment.user.name} ({assignment.role}
+                          {assignment.isLead && ' - Lead'})
+                        </li>
+                      ))}
+                    </ul>
+                    <button
+                      onClick={handleOpenTipModal}
+                      className="btn btn-sm btn-primary"
+                    >
+                      Enter Tips Now
+                    </button>
+                  </div>
+                </div>
+              </div>
+            ) : null;
+          })()}
+
         {/* Assignments */}
         <div className="card mb-6">
           <div className="card-header">

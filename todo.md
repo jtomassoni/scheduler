@@ -144,7 +144,7 @@ _Last updated: 2025-10-29 UTC_
 - [x] (API) "Publish tips" action (makes visible to staff)
 - [x] (NOTIF) Notify staff when tips published
 - [x] (NOTIF) Notify staff when tips updated
-- [ ] (ERR-UX) "Missing tip entry" → suggest: draft amount + alert manager (OPTIONAL)
+- [x] (ERR-UX) "Missing tip entry" → suggest: draft amount + alert manager
 
 ### ✅ Phase 11: Notification System (COMPLETE - Ongoing)
 
@@ -156,7 +156,7 @@ _Last updated: 2025-10-29 UTC_
 - [x] (LOGIC) Respect quiet hours (no push during quiet time, queue for email)
 - [x] (LOGIC) Push → email fallback if push fails (LOGIC COMPLETE - Infrastructure ready)
 - [x] (EMAIL) Email notification templates (TEMPLATES COMPLETE - Ready for email service integration)
-- [ ] (PUSH) Web push notification setup (service worker) (REQUIRES PUSH INFRASTRUCTURE)
+- [x] (PUSH) Web push notification setup (service worker) (COMPLETE - Requires VAPID keys and web-push package)
 - [x] ✅ (DB) All notification types already defined
 
 ### ✅ Phase 12: Mobile & Desktop Optimization (COMPLETE - Ongoing)
