@@ -120,20 +120,20 @@ _Last updated: 2025-10-29 UTC_
 - [x] (UI) View/manage external blocks (list, delete)
 - [x] (API) Manual external block creation (manager override)
 
-### 🔄 Phase 9: Reports & Analytics (NEXT)
+### ✅ Phase 9: Reports & Analytics (COMPLETE)
 
-- [ ] (UI) Monthly shift equity report
+- [x] (UI) Monthly shift equity report
   - User name, total shifts, lead shifts, shifts by venue
-- [ ] (UI) Venue summary report
+- [x] (UI) Venue summary report
   - Total shifts, unique staff count, avg shifts/user, lead coverage %
-- [ ] (UI) Lead compliance report
+- [x] (UI) Lead compliance report
   - Shifts requiring leads, coverage %, overrides used
-- [ ] (UI) Override summary report
+- [x] (UI) Override summary report
   - Count by type, most frequent users, approval rate
-- [ ] (API) Report generation endpoints with date ranges
-- [ ] (UI) Export reports as CSV/PDF
+- [x] (API) Report generation endpoints with date ranges
+- [x] (UI) Export reports as CSV/PDF
 
-### 💰 Phase 10: Tip Pool (Optional)
+### 🔄 Phase 10: Tip Pool (NEXT - Optional)
 
 - [ ] (UI) Manager: tip entry form per shift assignment
 - [ ] (UI) Manager: bulk tip entry for entire shift
@@ -246,3 +246,13 @@ _Last updated: 2025-10-29 UTC_
 - [x] 2025-10-31 (PENDING) List view of all external blocks with delete functionality
 - [x] 2025-10-31 (PENDING) Date/time format validation (YYYY-MM-DD, HH:MM)
 - [x] 2025-10-31 (PENDING) End time must be after start time validation
+- [x] 2025-10-31 (PENDING) Shift equity report API endpoint with user aggregation
+- [x] 2025-10-31 (PENDING) Venue summary report API endpoint with statistics calculation
+- [x] 2025-10-31 (PENDING) Override summary report API endpoint with pattern analysis
+- [x] 2025-10-31 (PENDING) Reports page with type selection and date range filtering
+- [x] 2025-10-31 (PENDING) Shift equity table showing total shifts, lead shifts, and venue breakdown per staff
+- [x] 2025-10-31 (PENDING) Venue summary table with staff utilization and lead coverage metrics
+- [x] 2025-10-31 (PENDING) Override summary with approval rates and violation type breakdown
+- [x] 2025-10-31 (PENDING) Export to CSV functionality for all report types
+- [x] 2025-10-31 (PENDING) Manager-only access with role-based authorization
+- [x] 2025-10-31 (PENDING) Date range defaults to current month
