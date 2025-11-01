@@ -4,6 +4,7 @@ import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 import { tradeUpdateSchema } from '@/lib/validations';
 import { z } from 'zod';
+import { NotificationService } from '@/lib/notification-service';
 
 /**
  * GET /api/trades/[id]
@@ -152,6 +153,32 @@ export async function PATCH(
         },
       },
     });
+
+    // Notify proposer about receiver's response
+    try {
+      const notifTitle =
+        updatedTrade.status === 'ACCEPTED'
+          ? 'Shift Trade Accepted'
+          : 'Shift Trade Declined';
+      const notifMessage =
+        updatedTrade.status === 'ACCEPTED'
+          ? `${updatedTrade.receiver.name} accepted your trade proposal for ${updatedTrade.shift.venue.name} on ${new Date(updatedTrade.shift.date).toLocaleDateString()}. Awaiting manager approval.`
+          : `${updatedTrade.receiver.name} declined your trade proposal for ${updatedTrade.shift.venue.name} on ${new Date(updatedTrade.shift.date).toLocaleDateString()}.`;
+
+      await NotificationService.create({
+        userId: updatedTrade.proposer.id,
+        type: 'TRADE_UPDATED',
+        title: notifTitle,
+        message: notifMessage,
+        data: {
+          tradeId: updatedTrade.id,
+          shiftId: updatedTrade.shift.id,
+          status: updatedTrade.status,
+        },
+      });
+    } catch (notifError) {
+      console.error('Failed to send trade update notification:', notifError);
+    }
 
     return NextResponse.json(updatedTrade);
   } catch (error) {

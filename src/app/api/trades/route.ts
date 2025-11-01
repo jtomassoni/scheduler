@@ -4,6 +4,7 @@ import { authOptions, isManager } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 import { tradeCreateSchema } from '@/lib/validations';
 import { z } from 'zod';
+import { NotificationService } from '@/lib/notification-service';
 
 /**
  * GET /api/trades?userId=xxx&status=xxx
@@ -283,6 +284,24 @@ export async function POST(request: NextRequest) {
         },
       },
     });
+
+    // Notify receiver about trade proposal
+    try {
+      await NotificationService.create({
+        userId: trade.receiver.id,
+        type: 'TRADE_PROPOSED',
+        title: 'Shift Trade Proposed',
+        message: `${trade.proposer.name} wants to trade a shift at ${trade.shift.venue.name} on ${new Date(trade.shift.date).toLocaleDateString()}`,
+        data: {
+          tradeId: trade.id,
+          shiftId: trade.shift.id,
+          proposerId: trade.proposer.id,
+          proposerName: trade.proposer.name,
+        },
+      });
+    } catch (notifError) {
+      console.error('Failed to send trade proposal notification:', notifError);
+    }
 
     return NextResponse.json(trade, { status: 201 });
   } catch (error) {

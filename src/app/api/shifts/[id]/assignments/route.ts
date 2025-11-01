@@ -4,6 +4,7 @@ import { authOptions, isManager } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 import { shiftAssignmentSchema } from '@/lib/validations';
 import { z } from 'zod';
+import { NotificationService } from '@/lib/notification-service';
 
 /**
  * POST /api/shifts/[id]/assignments
@@ -239,6 +240,28 @@ export async function POST(
         },
       },
     });
+
+    // Send notification to assigned user
+    try {
+      await NotificationService.create({
+        userId: assignment.user.id,
+        type: 'SHIFT_ASSIGNED',
+        title: 'New Shift Assignment',
+        message: `You have been assigned to a shift at ${shift.venue.name} on ${new Date(shift.date).toLocaleDateString()}`,
+        data: {
+          shiftId: shift.id,
+          venueId: shift.venue.id,
+          venueName: shift.venue.name,
+          date: shift.date,
+        },
+      });
+    } catch (notifError) {
+      // Log but don't fail the request if notification fails
+      console.error(
+        'Failed to send shift assignment notification:',
+        notifError
+      );
+    }
 
     return NextResponse.json(assignment, { status: 201 });
   } catch (error) {
