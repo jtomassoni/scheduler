@@ -4,6 +4,7 @@ import { authOptions, isManager } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 import { tradeCreateSchema } from '@/lib/validations';
 import { z } from 'zod';
+import { Prisma, TradeStatus } from '@prisma/client';
 import { NotificationService } from '@/lib/notification-service';
 
 /**
@@ -23,10 +24,7 @@ export async function GET(request: NextRequest) {
     const status = searchParams.get('status');
 
     // Build query filter
-    const where: {
-      OR?: Array<{ proposerId: string } | { receiverId: string }>;
-      status?: string;
-    } = {};
+    const where: Prisma.ShiftTradeWhereInput = {};
 
     // Non-managers can only see their own trades
     if (!isManager(session.user.role)) {
@@ -38,8 +36,8 @@ export async function GET(request: NextRequest) {
       where.OR = [{ proposerId: userId }, { receiverId: userId }];
     }
 
-    if (status) {
-      where.status = status;
+    if (status && Object.values(TradeStatus).includes(status as TradeStatus)) {
+      where.status = status as TradeStatus;
     }
 
     const trades = await prisma.shiftTrade.findMany({
