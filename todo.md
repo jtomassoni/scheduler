@@ -72,7 +72,7 @@ _Last updated: 2025-10-29 UTC_
 - [x] (API) Shift CRUD with validation
 - [x] (API) Shift assignment create/update/delete
 - [x] (NOTIF) Notify users when assigned to shifts
-- [ ] (NOTIF) Notify users when shift times change
+- [x] (NOTIF) Notify users when shift times change
 
 ### ✅ Phase 6: Override System (COMPLETE)
 
@@ -140,11 +140,11 @@ _Last updated: 2025-10-29 UTC_
 - [x] (API) Tip payout create/update endpoints (manager only)
 - [x] (LOG) Track edit history: who changed amount, when, old/new value
 - [x] (UI) Staff: read-only tip view (by shift, by month total)
-- [ ] (UI) Pending badge: tips entered but not yet published
-- [ ] (API) "Publish tips" action (makes visible to staff)
-- [ ] (NOTIF) Notify staff when tips published
-- [ ] (NOTIF) Notify staff when tips updated
-- [ ] (ERR-UX) "Missing tip entry" → suggest: draft amount + alert manager
+- [ ] (UI) Pending badge: tips entered but not yet published (OPTIONAL)
+- [ ] (API) "Publish tips" action (makes visible to staff) (OPTIONAL)
+- [ ] (NOTIF) Notify staff when tips published (OPTIONAL - requires publish workflow)
+- [x] (NOTIF) Notify staff when tips updated
+- [ ] (ERR-UX) "Missing tip entry" → suggest: draft amount + alert manager (OPTIONAL)
 
 ### ✅ Phase 11: Notification System (COMPLETE - Ongoing)
 

@@ -4,6 +4,7 @@ import { authOptions, isManager } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 import { shiftUpdateSchema } from '@/lib/validations';
 import { z } from 'zod';
+import { NotificationService } from '@/lib/notification-service';
 
 /**
  * GET /api/shifts/[id]
@@ -109,6 +110,40 @@ export async function PATCH(
     // Validate request body
     const validatedData = shiftUpdateSchema.parse({ ...body, id: params.id });
 
+    // Get original shift data to compare for changes
+    const originalShift = await prisma.shift.findUnique({
+      where: { id: params.id },
+      include: {
+        venue: true,
+        assignments: {
+          include: {
+            user: {
+              select: {
+                id: true,
+                name: true,
+                email: true,
+              },
+            },
+          },
+        },
+      },
+    });
+
+    if (!originalShift) {
+      return NextResponse.json({ error: 'Shift not found' }, { status: 404 });
+    }
+
+    // Check if time/date changed
+    const dateChanged =
+      validatedData.date &&
+      originalShift.date.toISOString() !==
+        new Date(validatedData.date).toISOString();
+    const timeChanged =
+      (validatedData.startTime &&
+        originalShift.startTime !== validatedData.startTime) ||
+      (validatedData.endTime &&
+        originalShift.endTime !== validatedData.endTime);
+
     // Update shift
     const updatedShift = await prisma.shift.update({
       where: { id: params.id },
@@ -144,6 +179,41 @@ export async function PATCH(
         },
       },
     });
+
+    // Notify assigned users if date or time changed
+    if ((dateChanged || timeChanged) && updatedShift.assignments.length > 0) {
+      try {
+        const userIds = updatedShift.assignments.map((a) => a.user.id);
+        const changeDescription = [];
+
+        if (dateChanged) {
+          changeDescription.push(
+            `date changed to ${new Date(updatedShift.date).toLocaleDateString()}`
+          );
+        }
+        if (timeChanged) {
+          changeDescription.push(
+            `time changed to ${updatedShift.startTime} - ${updatedShift.endTime}`
+          );
+        }
+
+        await NotificationService.createBulk(userIds, {
+          type: 'SHIFT_ASSIGNED',
+          title: 'Shift Time Updated',
+          message: `Your shift at ${updatedShift.venue.name} has been updated: ${changeDescription.join(', ')}.`,
+          data: {
+            shiftId: updatedShift.id,
+            venueId: updatedShift.venue.id,
+            venueName: updatedShift.venue.name,
+            date: updatedShift.date,
+            startTime: updatedShift.startTime,
+            endTime: updatedShift.endTime,
+          },
+        });
+      } catch (notifError) {
+        console.error('Failed to send shift update notifications:', notifError);
+      }
+    }
 
     return NextResponse.json(updatedShift);
   } catch (error) {

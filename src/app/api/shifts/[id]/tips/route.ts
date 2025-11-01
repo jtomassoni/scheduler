@@ -3,6 +3,7 @@ import { getServerSession } from 'next-auth';
 import { z } from 'zod';
 import { authOptions, isManager } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
+import { NotificationService } from '@/lib/notification-service';
 
 // Schema for bulk tip entry
 const bulkTipSchema = z.object({
@@ -93,7 +94,7 @@ export async function POST(
 
     await prisma.$transaction(updatePromises);
 
-    // Get updated assignments
+    // Get updated assignments with shift and venue details
     const updatedAssignments = await prisma.shiftAssignment.findMany({
       where: {
         shiftId: params.id,
@@ -106,8 +107,46 @@ export async function POST(
             email: true,
           },
         },
+        shift: {
+          select: {
+            id: true,
+            date: true,
+            venue: {
+              select: {
+                name: true,
+              },
+            },
+          },
+        },
       },
     });
+
+    // Notify users about their tip amounts
+    if (updatedAssignments.length > 0) {
+      try {
+        const notificationPromises = updatedAssignments
+          .filter((assignment) => assignment.tipAmount !== null)
+          .map((assignment) =>
+            NotificationService.create({
+              userId: assignment.user.id,
+              type: 'SHIFT_ASSIGNED',
+              title: 'Tips Updated',
+              message: `Your tips for ${assignment.shift.venue.name} on ${new Date(assignment.shift.date).toLocaleDateString()} have been updated: $${assignment.tipAmount?.toFixed(2) || '0.00'}`,
+              data: {
+                shiftId: assignment.shift.id,
+                assignmentId: assignment.id,
+                tipAmount: assignment.tipAmount,
+                venueName: assignment.shift.venue.name,
+                date: assignment.shift.date,
+              },
+            })
+          );
+
+        await Promise.all(notificationPromises);
+      } catch (notifError) {
+        console.error('Failed to send tip update notifications:', notifError);
+      }
+    }
 
     return NextResponse.json({
       success: true,
