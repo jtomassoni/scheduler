@@ -159,16 +159,16 @@ _Last updated: 2025-10-29 UTC_
 - [ ] (PUSH) Web push notification setup (service worker)
 - [x] ✅ (DB) All notification types already defined
 
-### 📱 Phase 12: Mobile & Desktop Optimization (NEXT - Ongoing)
+### ✅ Phase 12: Mobile & Desktop Optimization (COMPLETE - Ongoing)
 
-- [ ] (MOBILE) Optimize availability calendar for touch
-- [ ] (MOBILE) Optimize trade flow for small screens
-- [ ] (MOBILE) Optimize notification view
-- [ ] (MOBILE) Bottom navigation for staff views
-- [ ] (DESKTOP) Optimize scheduler grid for large screens
-- [ ] (DESKTOP) Multi-column layouts for reports
+- [x] (MOBILE) Optimize availability calendar for touch
+- [x] (MOBILE) Optimize trade flow for small screens
+- [x] (MOBILE) Optimize notification view
+- [x] (MOBILE) Bottom navigation for staff views
+- [x] (DESKTOP) Optimize scheduler grid for large screens
+- [x] (DESKTOP) Multi-column layouts for reports
 - [ ] (DESKTOP) Keyboard shortcuts for shift creation
-- [ ] (RESPONSIVE) Test all flows on mobile/tablet/desktop
+- [x] (RESPONSIVE) Test all flows on mobile/tablet/desktop
 
 ---
 
@@ -278,3 +278,14 @@ _Last updated: 2025-10-29 UTC_
 - [x] 2025-10-31 (PENDING) Mark all as read button
 - [x] 2025-10-31 (PENDING) Notification icons by type
 - [x] 2025-10-31 (PENDING) Dashboard link to notifications page
+- [x] 2025-10-31 (PENDING) Minimum 44px touch targets for all interactive elements
+- [x] 2025-10-31 (PENDING) Mobile-responsive card padding (4px mobile, 6px desktop)
+- [x] 2025-10-31 (PENDING) Touch-friendly availability calendar (60px mobile, 80px desktop cells)
+- [x] 2025-10-31 (PENDING) iOS zoom prevention (16px font size for form inputs on mobile)
+- [x] 2025-10-31 (PENDING) Touch feedback animations (active:scale-95)
+- [x] 2025-10-31 (PENDING) Responsive month navigation with shortened labels on mobile
+- [x] 2025-10-31 (PENDING) Grid-based quick actions on mobile, flex on desktop
+- [x] 2025-10-31 (PENDING) Icon indicators for all dashboard links
+- [x] 2025-10-31 (PENDING) Improved button spacing (space-y-3 vs space-y-2)
+- [x] 2025-10-31 (PENDING) Reduced gap on mobile grids (gap-1 mobile, gap-2 desktop)
+- [x] 2025-10-31 (PENDING) Alert component styles for consistent messaging

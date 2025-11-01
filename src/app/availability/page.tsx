@@ -289,21 +289,23 @@ export default function AvailabilityPage() {
 
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Month Navigation */}
-        <div className="flex items-center justify-between mb-6">
+        <div className="flex items-center justify-between mb-4 sm:mb-6 gap-2">
           <button
             onClick={() => changeMonth(-1)}
-            className="btn btn-outline"
+            className="btn btn-outline text-xs sm:text-sm"
             disabled={saving}
           >
-            ← Previous Month
+            <span className="hidden sm:inline">← Previous Month</span>
+            <span className="sm:hidden">← Prev</span>
           </button>
-          <h2 className="text-xl font-semibold">{monthName}</h2>
+          <h2 className="text-lg sm:text-xl font-semibold">{monthName}</h2>
           <button
             onClick={() => changeMonth(1)}
-            className="btn btn-outline"
+            className="btn btn-outline text-xs sm:text-sm"
             disabled={saving}
           >
-            Next Month →
+            <span className="hidden sm:inline">Next Month →</span>
+            <span className="sm:hidden">Next →</span>
           </button>
         </div>
 
@@ -325,24 +327,24 @@ export default function AvailabilityPage() {
               <h3 className="font-semibold">Quick Actions</h3>
             </div>
             <div className="card-content">
-              <div className="flex flex-wrap gap-2">
+              <div className="grid grid-cols-1 sm:flex sm:flex-wrap gap-2">
                 <button
                   onClick={selectAllAvailable}
-                  className="btn btn-outline"
+                  className="btn btn-outline w-full sm:w-auto"
                   disabled={saving}
                 >
                   Select All Available
                 </button>
                 <button
                   onClick={selectAllUnavailable}
-                  className="btn btn-outline"
+                  className="btn btn-outline w-full sm:w-auto"
                   disabled={saving}
                 >
                   Select All Unavailable
                 </button>
                 <button
                   onClick={selectWeekends}
-                  className="btn btn-outline"
+                  className="btn btn-outline w-full sm:w-auto"
                   disabled={saving}
                 >
                   Select Weekends
@@ -355,12 +357,12 @@ export default function AvailabilityPage() {
         {/* Calendar Grid */}
         <div className="card mb-6">
           <div className="card-content">
-            <div className="grid grid-cols-7 gap-2">
+            <div className="grid grid-cols-7 gap-1 sm:gap-2">
               {/* Day headers */}
               {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map((day) => (
                 <div
                   key={day}
-                  className="text-center font-semibold text-sm text-muted-foreground py-2"
+                  className="text-center font-semibold text-xs sm:text-sm text-muted-foreground py-2"
                 >
                   {day}
                 </div>
@@ -384,14 +386,17 @@ export default function AvailabilityPage() {
                     onClick={() => toggleDate(dateStr)}
                     disabled={isLocked}
                     className={`
-                      p-4 rounded-lg border-2 transition-colors
+                      p-2 sm:p-4 rounded-lg border-2 transition-colors touch-feedback
+                      min-h-[60px] sm:min-h-[80px]
                       ${isAvailable ? 'bg-green-500/20 border-green-500 text-green-700 dark:text-green-300' : 'bg-red-500/20 border-red-500 text-red-700 dark:text-red-300'}
                       ${isToday ? 'ring-2 ring-primary' : ''}
-                      ${isLocked ? 'opacity-50 cursor-not-allowed' : 'hover:opacity-80 cursor-pointer'}
+                      ${isLocked ? 'opacity-50 cursor-not-allowed' : 'hover:opacity-80 cursor-pointer active:scale-95'}
                     `}
                   >
-                    <div className="text-lg font-semibold">{day.getDate()}</div>
-                    <div className="text-xs mt-1">
+                    <div className="text-base sm:text-lg font-semibold">
+                      {day.getDate()}
+                    </div>
+                    <div className="text-[10px] sm:text-xs mt-1">
                       {isAvailable ? 'Available' : 'Unavailable'}
                     </div>
                   </button>

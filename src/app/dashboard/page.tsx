@@ -32,8 +32,8 @@ export default async function DashboardPage() {
         </div>
       </header>
 
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-8">
+        <div className="grid gap-4 sm:gap-6 md:grid-cols-2 lg:grid-cols-3">
           <div className="card">
             <div className="card-header">
               <h2 className="text-xl font-semibold">Your Profile</h2>
@@ -64,19 +64,31 @@ export default async function DashboardPage() {
                 <h2 className="text-xl font-semibold">Management Tools</h2>
               </div>
               <div className="card-content">
-                <ul className="space-y-2">
+                <ul className="space-y-3">
                   <li>
-                    <a href="/venues" className="text-primary hover:underline">
+                    <a
+                      href="/venues"
+                      className="text-primary hover:underline tap-target inline-flex items-center"
+                    >
+                      <span className="mr-2">🏢</span>
                       Manage Venues
                     </a>
                   </li>
                   <li>
-                    <a href="/shifts" className="text-primary hover:underline">
+                    <a
+                      href="/shifts"
+                      className="text-primary hover:underline tap-target inline-flex items-center"
+                    >
+                      <span className="mr-2">📋</span>
                       Schedule Shifts
                     </a>
                   </li>
                   <li>
-                    <a href="/reports" className="text-primary hover:underline">
+                    <a
+                      href="/reports"
+                      className="text-primary hover:underline tap-target inline-flex items-center"
+                    >
+                      <span className="mr-2">📊</span>
                       View Reports
                     </a>
                   </li>
@@ -90,53 +102,76 @@ export default async function DashboardPage() {
               <h2 className="text-xl font-semibold">Quick Actions</h2>
             </div>
             <div className="card-content">
-              <ul className="space-y-2">
+              <ul className="space-y-3">
                 <li>
                   <a
                     href="/notifications"
-                    className="text-primary hover:underline"
+                    className="text-primary hover:underline tap-target inline-flex items-center"
                   >
+                    <span className="mr-2">🔔</span>
                     Notifications
                   </a>
                 </li>
                 <li>
                   <a
                     href="/availability"
-                    className="text-primary hover:underline"
+                    className="text-primary hover:underline tap-target inline-flex items-center"
                   >
+                    <span className="mr-2">📅</span>
                     Update Availability
                   </a>
                 </li>
                 <li>
                   <a
                     href="/external-blocks"
-                    className="text-primary hover:underline"
+                    className="text-primary hover:underline tap-target inline-flex items-center"
                   >
+                    <span className="mr-2">📆</span>
                     External Schedule
                   </a>
                 </li>
                 <li>
-                  <a href="/shifts/my" className="text-primary hover:underline">
+                  <a
+                    href="/shifts/my"
+                    className="text-primary hover:underline tap-target inline-flex items-center"
+                  >
+                    <span className="mr-2">⏰</span>
                     My Shifts
                   </a>
                 </li>
                 <li>
-                  <a href="/overrides" className="text-primary hover:underline">
+                  <a
+                    href="/overrides"
+                    className="text-primary hover:underline tap-target inline-flex items-center"
+                  >
+                    <span className="mr-2">⚠️</span>
                     Override Requests
                   </a>
                 </li>
                 <li>
-                  <a href="/trades" className="text-primary hover:underline">
+                  <a
+                    href="/trades"
+                    className="text-primary hover:underline tap-target inline-flex items-center"
+                  >
+                    <span className="mr-2">🔄</span>
                     Shift Trades
                   </a>
                 </li>
                 <li>
-                  <a href="/tips" className="text-primary hover:underline">
+                  <a
+                    href="/tips"
+                    className="text-primary hover:underline tap-target inline-flex items-center"
+                  >
+                    <span className="mr-2">💰</span>
                     My Tips
                   </a>
                 </li>
                 <li>
-                  <a href="/profile" className="text-primary hover:underline">
+                  <a
+                    href="/profile"
+                    className="text-primary hover:underline tap-target inline-flex items-center"
+                  >
+                    <span className="mr-2">👤</span>
                     Edit Profile
                   </a>
                 </li>
