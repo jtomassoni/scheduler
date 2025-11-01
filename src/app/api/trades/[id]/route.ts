@@ -176,6 +176,35 @@ export async function PATCH(
           status: updatedTrade.status,
         },
       });
+
+      // If accepted, notify managers that approval is needed
+      if (updatedTrade.status === 'ACCEPTED') {
+        // Get managers for the venue
+        const venue = await prisma.venue.findUnique({
+          where: { id: updatedTrade.shift.venueId },
+          include: {
+            managers: {
+              select: {
+                id: true,
+              },
+            },
+          },
+        });
+
+        if (venue && venue.managers.length > 0) {
+          const managerIds = venue.managers.map((m) => m.id);
+          await NotificationService.createBulk(managerIds, {
+            type: 'TRADE_UPDATED',
+            title: 'Shift Trade Needs Approval',
+            message: `${updatedTrade.proposer.name} and ${updatedTrade.receiver.name} have agreed to trade a shift at ${updatedTrade.shift.venue.name} on ${new Date(updatedTrade.shift.date).toLocaleDateString()}. Your approval is required.`,
+            data: {
+              tradeId: updatedTrade.id,
+              shiftId: updatedTrade.shift.id,
+              status: 'ACCEPTED',
+            },
+          });
+        }
+      }
     } catch (notifError) {
       console.error('Failed to send trade update notification:', notifError);
     }

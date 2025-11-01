@@ -4,6 +4,7 @@ import { authOptions, isManager } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 import { tradeApprovalSchema } from '@/lib/validations';
 import { z } from 'zod';
+import { NotificationService } from '@/lib/notification-service';
 
 /**
  * POST /api/trades/[id]/approve
@@ -112,6 +113,28 @@ export async function POST(
         },
       });
 
+      // Notify both users of approval
+      try {
+        await NotificationService.createBulk(
+          [updatedTrade.proposerId, updatedTrade.receiverId],
+          {
+            type: 'TRADE_UPDATED',
+            title: 'Shift Trade Approved',
+            message: `Your shift trade for ${updatedTrade.shift.venue.name} on ${new Date(updatedTrade.shift.date).toLocaleDateString()} has been approved by management.`,
+            data: {
+              tradeId: updatedTrade.id,
+              shiftId: updatedTrade.shift.id,
+              status: 'APPROVED',
+            },
+          }
+        );
+      } catch (notifError) {
+        console.error(
+          'Failed to send trade approval notifications:',
+          notifError
+        );
+      }
+
       return NextResponse.json(updatedTrade);
     } else {
       // Decline the trade
@@ -145,6 +168,32 @@ export async function POST(
           },
         },
       });
+
+      // Notify both users of decline
+      try {
+        const declineReason = validatedData.declinedReason
+          ? ` Reason: ${validatedData.declinedReason}`
+          : '';
+        await NotificationService.createBulk(
+          [updatedTrade.proposerId, updatedTrade.receiverId],
+          {
+            type: 'TRADE_UPDATED',
+            title: 'Shift Trade Declined',
+            message: `Your shift trade for ${updatedTrade.shift.venue.name} on ${new Date(updatedTrade.shift.date).toLocaleDateString()} has been declined by management.${declineReason}`,
+            data: {
+              tradeId: updatedTrade.id,
+              shiftId: updatedTrade.shift.id,
+              status: 'DECLINED',
+              declinedReason: validatedData.declinedReason,
+            },
+          }
+        );
+      } catch (notifError) {
+        console.error(
+          'Failed to send trade decline notifications:',
+          notifError
+        );
+      }
 
       return NextResponse.json(updatedTrade);
     }

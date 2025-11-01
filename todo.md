@@ -52,7 +52,7 @@ _Last updated: 2025-10-29 UTC_
 - [x] (LOCK) Lock availability after deadline
 - [ ] (API) Manager override to unlock availability
 - [ ] (NOTIF) Reminders at T-7, T-3, T-1 days before deadline
-- [ ] (VAL) Prevent scheduling users with unavailable dates
+- [x] (VAL) Prevent scheduling users with unavailable dates
 
 ### ✅ Phase 5: Shift Management & Scheduling (COMPLETE)
 
@@ -71,7 +71,7 @@ _Last updated: 2025-10-29 UTC_
 - [x] (ERR-UX) "Requested off" → suggest: pick different user / use override
 - [x] (API) Shift CRUD with validation
 - [x] (API) Shift assignment create/update/delete
-- [ ] (NOTIF) Notify users when assigned to shifts
+- [x] (NOTIF) Notify users when assigned to shifts
 - [ ] (NOTIF) Notify users when shift times change
 
 ### ✅ Phase 6: Override System (COMPLETE)
@@ -103,10 +103,10 @@ _Last updated: 2025-10-29 UTC_
 - [x] (API) Trade acceptance flow
 - [x] (API) Manager approval endpoint
 - [x] (UI) Trade status badges: proposed/accepted/approved/declined
-- [ ] (NOTIF) Notify receiver when trade proposed
-- [ ] (NOTIF) Notify proposer when receiver responds
-- [ ] (NOTIF) Notify manager when trade accepted (needs approval)
-- [ ] (NOTIF) Notify both users when manager approves/declines
+- [x] (NOTIF) Notify receiver when trade proposed
+- [x] (NOTIF) Notify proposer when receiver responds
+- [x] (NOTIF) Notify manager when trade accepted (needs approval)
+- [x] (NOTIF) Notify both users when manager approves/declines
 
 ### ✅ Phase 8: External Schedule Imports (COMPLETE)
 
