@@ -4,7 +4,7 @@ import { authOptions, isManager } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 import { overrideCreateSchema } from '@/lib/validations';
 import { z } from 'zod';
-import { Prisma } from '@prisma/client';
+import { Prisma, OverrideStatus } from '@prisma/client';
 import { NotificationService } from '@/lib/notification-service';
 
 /**
@@ -25,11 +25,7 @@ export async function GET(request: NextRequest) {
     const status = searchParams.get('status');
 
     // Build query filter
-    const where: {
-      shiftId?: string;
-      userId?: string;
-      status?: string;
-    } = {};
+    const where: Prisma.OverrideWhereInput = {};
 
     if (shiftId) {
       where.shiftId = shiftId;
@@ -39,8 +35,11 @@ export async function GET(request: NextRequest) {
       where.userId = userId;
     }
 
-    if (status) {
-      where.status = status;
+    if (
+      status &&
+      Object.values(OverrideStatus).includes(status as OverrideStatus)
+    ) {
+      where.status = status as OverrideStatus;
     }
 
     // Non-managers can only see their own overrides
