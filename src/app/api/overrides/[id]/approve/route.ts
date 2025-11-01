@@ -5,6 +5,7 @@ import { prisma } from '@/lib/prisma';
 import { overrideApprovalSchema } from '@/lib/validations';
 import { z } from 'zod';
 import { Prisma } from '@prisma/client';
+import { NotificationService } from '@/lib/notification-service';
 
 /**
  * POST /api/overrides/[id]/approve
@@ -129,6 +130,50 @@ export async function POST(
         },
       },
     });
+
+    // Notify venue managers about the override decision
+    try {
+      // Get managers for the venue
+      const venue = await prisma.venue.findUnique({
+        where: { id: updatedOverride.shift.venueId },
+        include: {
+          managers: {
+            select: {
+              id: true,
+            },
+          },
+        },
+      });
+
+      if (venue && venue.managers.length > 0) {
+        const managerIds = venue.managers.map((m) => m.id);
+        const statusText =
+          newStatus === 'ACTIVE'
+            ? 'approved'
+            : newStatus === 'DECLINED'
+              ? 'declined'
+              : 'pending';
+
+        await NotificationService.createBulk(managerIds, {
+          type: 'OVERRIDE_APPROVED',
+          title: `Override ${statusText.charAt(0).toUpperCase() + statusText.slice(1)}`,
+          message:
+            newStatus === 'ACTIVE'
+              ? `The staff member has approved the override for ${updatedOverride.shift.venue.name} on ${new Date(updatedOverride.shift.date).toLocaleDateString()}. The assignment is now active.`
+              : `The staff member has declined the override for ${updatedOverride.shift.venue.name} on ${new Date(updatedOverride.shift.date).toLocaleDateString()}.`,
+          data: {
+            overrideId: updatedOverride.id,
+            shiftId: updatedOverride.shift.id,
+            status: newStatus,
+          },
+        });
+      }
+    } catch (notifError) {
+      console.error(
+        'Failed to send override decision notification:',
+        notifError
+      );
+    }
 
     return NextResponse.json(updatedOverride);
   } catch (error) {

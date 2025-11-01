@@ -85,9 +85,9 @@ _Last updated: 2025-10-29 UTC_
 - [x] (UI) Override badges on shifts: pending/active/declined
 - [x] (LOG) Immutable audit trail for all override actions
 - [x] (API) Override CRUD with approval workflow
-- [ ] (NOTIF) Notify manager when override requested
-- [ ] (NOTIF) Notify staff when override approval needed
-- [ ] (NOTIF) Notify both when override approved/declined
+- [x] (NOTIF) Notify manager when override requested
+- [x] (NOTIF) Notify staff when override approval needed
+- [x] (NOTIF) Notify both when override approved/declined
 
 ### ✅ Phase 7: Shift Trading (COMPLETE)
 

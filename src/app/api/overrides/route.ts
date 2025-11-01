@@ -5,6 +5,7 @@ import { prisma } from '@/lib/prisma';
 import { overrideCreateSchema } from '@/lib/validations';
 import { z } from 'zod';
 import { Prisma } from '@prisma/client';
+import { NotificationService } from '@/lib/notification-service';
 
 /**
  * GET /api/overrides?shiftId=xxx&userId=xxx&status=xxx
@@ -167,6 +168,23 @@ export async function POST(request: NextRequest) {
         comment: 'Manager initiated override',
       },
     });
+
+    // Notify the staff member that their approval is needed
+    try {
+      await NotificationService.create({
+        userId: override.userId,
+        type: 'OVERRIDE_APPROVED',
+        title: 'Override Approval Needed',
+        message: `A manager has requested to assign you to a shift at ${override.shift.venue.name} on ${new Date(override.shift.date).toLocaleDateString()} despite a ${override.violationType.replace('_', ' ')} conflict. Your approval is required.`,
+        data: {
+          overrideId: override.id,
+          shiftId: override.shift.id,
+          violationType: override.violationType,
+        },
+      });
+    } catch (notifError) {
+      console.error('Failed to send override notification:', notifError);
+    }
 
     return NextResponse.json(override, { status: 201 });
   } catch (error) {
