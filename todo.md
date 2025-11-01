@@ -146,20 +146,20 @@ _Last updated: 2025-10-29 UTC_
 - [ ] (NOTIF) Notify staff when tips updated
 - [ ] (ERR-UX) "Missing tip entry" → suggest: draft amount + alert manager
 
-### 🔔 Phase 11: Notification System (NEXT - Ongoing)
+### ✅ Phase 11: Notification System (COMPLETE - Ongoing)
 
-- [ ] (API) Notification creation service
-- [ ] (API) Mark notification as read
-- [ ] (API) Bulk mark all read
-- [ ] (UI) Notification bell icon with unread count
-- [ ] (UI) Notification dropdown/page with list
-- [ ] (LOGIC) Respect quiet hours (no push during quiet time, queue for email)
+- [x] (API) Notification creation service
+- [x] (API) Mark notification as read
+- [x] (API) Bulk mark all read
+- [x] (UI) Notification bell icon with unread count
+- [x] (UI) Notification dropdown/page with list
+- [x] (LOGIC) Respect quiet hours (no push during quiet time, queue for email)
 - [ ] (LOGIC) Push → email fallback if push fails
 - [ ] (EMAIL) Email notification templates
 - [ ] (PUSH) Web push notification setup (service worker)
-- [ ] ✅ (DB) All notification types already defined
+- [x] ✅ (DB) All notification types already defined
 
-### 📱 Phase 12: Mobile & Desktop Optimization (Ongoing)
+### 📱 Phase 12: Mobile & Desktop Optimization (NEXT - Ongoing)
 
 - [ ] (MOBILE) Optimize availability calendar for touch
 - [ ] (MOBILE) Optimize trade flow for small screens
@@ -265,3 +265,16 @@ _Last updated: 2025-10-29 UTC_
 - [x] 2025-10-31 (PENDING) Total tips, average tip, and shift count calculations
 - [x] 2025-10-31 (PENDING) Tip history table with venue and date information
 - [x] 2025-10-31 (PENDING) Dashboard link to My Tips page
+- [x] 2025-10-31 (PENDING) Notification service with creation and management methods
+- [x] 2025-10-31 (PENDING) Quiet hours support (skip notifications during configured times)
+- [x] 2025-10-31 (PENDING) Notification preference checking (email/push toggles)
+- [x] 2025-10-31 (PENDING) Bulk notification creation for multiple users
+- [x] 2025-10-31 (PENDING) GET /api/notifications endpoint with filtering
+- [x] 2025-10-31 (PENDING) POST /api/notifications/[id]/read endpoint
+- [x] 2025-10-31 (PENDING) POST /api/notifications/read-all endpoint
+- [x] 2025-10-31 (PENDING) Unread count tracking and display
+- [x] 2025-10-31 (PENDING) Notifications page with all/unread filter
+- [x] 2025-10-31 (PENDING) Click notification to mark as read
+- [x] 2025-10-31 (PENDING) Mark all as read button
+- [x] 2025-10-31 (PENDING) Notification icons by type
+- [x] 2025-10-31 (PENDING) Dashboard link to notifications page

@@ -93,6 +93,14 @@ export default async function DashboardPage() {
               <ul className="space-y-2">
                 <li>
                   <a
+                    href="/notifications"
+                    className="text-primary hover:underline"
+                  >
+                    Notifications
+                  </a>
+                </li>
+                <li>
+                  <a
                     href="/availability"
                     className="text-primary hover:underline"
                   >
