@@ -1,4 +1,3 @@
-import { PrismaAdapter } from '@auth/prisma-adapter';
 import { NextAuthOptions } from 'next-auth';
 import CredentialsProvider from 'next-auth/providers/credentials';
 import { prisma } from '@/lib/prisma';
@@ -31,7 +30,8 @@ declare module 'next-auth/jwt' {
 }
 
 export const authOptions: NextAuthOptions = {
-  adapter: PrismaAdapter(prisma),
+  // Adapter not needed for JWT strategy
+  // adapter: PrismaAdapter(prisma),
   session: {
     strategy: 'jwt',
   },
@@ -126,4 +126,3 @@ export function isManager(role: Role): boolean {
 export function isStaff(role: Role): boolean {
   return role === 'BARTENDER' || role === 'BARBACK';
 }
-

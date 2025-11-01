@@ -75,20 +75,20 @@ export async function POST(request: NextRequest) {
       validatedData.venueIds &&
       validatedData.venueIds.length > 0
     ) {
-      await prisma.venue.updateMany({
-        where: {
-          id: {
-            in: validatedData.venueIds,
-          },
-        },
-        data: {
-          managers: {
-            connect: {
-              id: newUser.id,
+      await Promise.all(
+        validatedData.venueIds.map((venueId) =>
+          prisma.venue.update({
+            where: { id: venueId },
+            data: {
+              managers: {
+                connect: {
+                  id: newUser.id,
+                },
+              },
             },
-          },
-        },
-      });
+          })
+        )
+      );
     }
 
     // TODO: Send email with invite link and temporary password

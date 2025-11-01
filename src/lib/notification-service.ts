@@ -64,7 +64,7 @@ export class NotificationService {
         type,
         title,
         message,
-        data: data || null,
+        data: data ? (data as any) : undefined,
       },
     });
 

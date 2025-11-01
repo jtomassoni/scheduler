@@ -225,7 +225,7 @@ export default function ReportsPage() {
                 >
                   {loading ? 'Generating...' : 'Generate'}
                 </button>
-                {reportData && (
+                {reportData !== null && (
                   <button
                     onClick={exportToCSV}
                     className="btn btn-outline"
@@ -247,7 +247,7 @@ export default function ReportsPage() {
         )}
 
         {/* Report Display */}
-        {reportData && (
+        {reportData !== null && (
           <div className="card">
             <div className="card-header">
               <h2 className="text-xl font-semibold">
