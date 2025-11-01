@@ -40,6 +40,12 @@ export async function POST(
       where: { id: params.id },
       include: {
         assignments: true,
+        venue: {
+          select: {
+            id: true,
+            name: true,
+          },
+        },
       },
     });
 
