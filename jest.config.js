@@ -20,4 +20,3 @@ const customJestConfig = {
 };
 
 module.exports = createJestConfig(customJestConfig);
-

@@ -1,4 +1,10 @@
-import { Role, UserStatus, OverrideStatus, TradeStatus, NotificationType } from '@prisma/client';
+import {
+  Role,
+  UserStatus,
+  OverrideStatus,
+  TradeStatus,
+  NotificationType,
+} from '@prisma/client';
 
 export type { Role, UserStatus, OverrideStatus, TradeStatus, NotificationType };
 
@@ -138,4 +144,3 @@ export interface VenueReport {
   leadCoveragePercent: number;
   overridesCount: number;
 }
-

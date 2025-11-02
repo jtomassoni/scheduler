@@ -78,4 +78,3 @@ export async function inviteUser(input: Omit<CreateUserInput, 'password'>) {
 
   return { user, tempPassword };
 }
-

@@ -84,10 +84,10 @@ The project uses Husky and lint-staged to run linting and formatting checks befo
 ### CI/CD
 
 GitHub Actions workflows automatically run on push and pull requests:
+
 - **CI**: Runs linting, tests, and builds
 - **Deploy**: Configured for your deployment provider (requires setup)
 
 ## License
 
 Proprietary
-

@@ -139,6 +139,7 @@ Each validation error includes:
 - **Suggested resolution** (required per system prompt)
 
 Example:
+
 ```typescript
 {
   field: "shift.leads",
@@ -331,4 +332,3 @@ All components must follow WCAG AA standards:
 - [TailwindCSS Documentation](https://tailwindcss.com/docs)
 - [WCAG Guidelines](https://www.w3.org/WAI/WCAG21/quickref/)
 - [TypeScript Handbook](https://www.typescriptlang.org/docs/handbook/intro.html)
-
