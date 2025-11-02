@@ -3,6 +3,9 @@ import { getServerSession } from 'next-auth';
 import { authOptions, isManager } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 
+// Force dynamic rendering - this route uses headers() for authentication
+export const dynamic = 'force-dynamic';
+
 /**
  * GET /api/tips/history?startDate=xxx&endDate=xxx&userId=xxx
  * Get tip history for a user or all users

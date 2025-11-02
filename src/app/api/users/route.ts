@@ -4,6 +4,9 @@ import { authOptions, isManager } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 import { Role, UserStatus } from '@prisma/client';
 
+// Force dynamic rendering - this route uses headers() for authentication
+export const dynamic = 'force-dynamic';
+
 /**
  * GET /api/users
  * Get users (filtered by query params)

@@ -3,6 +3,9 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { NotificationService } from '@/lib/notification-service';
 
+// Force dynamic rendering - this route uses headers() for authentication
+export const dynamic = 'force-dynamic';
+
 /**
  * GET /api/notifications?limit=50&offset=0&unreadOnly=false
  * Get notifications for the current user

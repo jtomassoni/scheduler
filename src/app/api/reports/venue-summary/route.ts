@@ -3,6 +3,9 @@ import { getServerSession } from 'next-auth';
 import { authOptions, isManager } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 
+// Force dynamic rendering - this route uses headers() for authentication
+export const dynamic = 'force-dynamic';
+
 /**
  * GET /api/reports/venue-summary?startDate=xxx&endDate=xxx
  * Venue summary report - shows venue utilization and statistics
