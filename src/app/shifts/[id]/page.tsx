@@ -832,13 +832,13 @@ export default function ShiftDetailPage() {
     <PremiumLayout>
       <div className="relative z-10 min-h-screen">
         <header className="sticky top-0 z-20 bg-gray-900/80 backdrop-blur-xl border-b border-gray-800/50">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-2">
-            <div className="flex items-center justify-between">
-              <div>
-                <h1 className="text-xl sm:text-2xl font-bold bg-gradient-to-r from-purple-400 via-blue-400 to-cyan-400 bg-clip-text text-transparent">
+          <div className="max-w-7xl mx-auto px-3 sm:px-4 lg:px-8 py-2">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 sm:gap-0">
+              <div className="min-w-0 flex-1">
+                <h1 className="text-lg sm:text-xl lg:text-2xl font-bold bg-gradient-to-r from-purple-400 via-blue-400 to-cyan-400 bg-clip-text text-transparent truncate">
                   {shift.eventName || 'Shift Details'}
                 </h1>
-                <p className="text-xs text-gray-400">
+                <p className="text-[10px] sm:text-xs text-gray-400 truncate">
                   {shift.venue.name} •{' '}
                   {new Date(shift.date).toLocaleDateString('en-US', {
                     weekday: 'short',
@@ -849,14 +849,16 @@ export default function ShiftDetailPage() {
                   {formatTime12Hour(shift.startTime)}
                 </p>
               </div>
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2 self-end sm:self-auto">
                 <button
                   onClick={() =>
                     router.push(isManager ? '/shifts' : '/dashboard')
                   }
-                  className="px-3 py-1.5 rounded-lg border border-gray-700 bg-gray-800/50 text-gray-300 font-medium hover:bg-gray-800 transition-all text-sm"
+                  className="px-3 py-2 rounded-lg border border-gray-700 bg-gray-800/50 text-gray-300 font-medium hover:bg-gray-800 transition-all text-xs sm:text-sm min-h-[44px] touch-manipulation"
+                  aria-label="Go back"
                 >
-                  Back
+                  <span className="hidden sm:inline">Back</span>
+                  <span className="sm:hidden">←</span>
                 </button>
                 <UserMenu />
               </div>
@@ -898,19 +900,20 @@ export default function ShiftDetailPage() {
           <PremiumCard className="mb-3">
             <div className="p-4">
               <div className="flex items-center justify-between mb-3">
-                <h2 className="text-lg font-semibold text-gray-100">
+                <h2 className="text-base sm:text-lg font-semibold text-gray-100">
                   Shift Information
                 </h2>
                 {isManager && (
                   <button
                     onClick={() => setShowEditModal(true)}
-                    className="px-3 py-1.5 rounded-lg border border-gray-700 dark:border-gray-600 bg-gray-100 dark:bg-gray-800/50 text-gray-700 dark:text-gray-300 font-medium hover:bg-gray-200 dark:hover:bg-gray-800 transition-all text-sm"
+                    className="px-3 py-2 rounded-lg border border-gray-700 dark:border-gray-600 bg-gray-100 dark:bg-gray-800/50 text-gray-700 dark:text-gray-300 font-medium hover:bg-gray-200 dark:hover:bg-gray-800 transition-all text-xs sm:text-sm min-h-[44px] touch-manipulation"
+                    aria-label="Edit shift"
                   >
                     Edit
                   </button>
                 )}
               </div>
-              <dl className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
+              <dl className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-4">
                 {shift.eventName && (
                   <div>
                     <dt className="text-xs text-gray-400 mb-0.5">Event</dt>
