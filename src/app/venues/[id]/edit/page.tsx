@@ -17,6 +17,7 @@ interface Venue {
   priority: number;
   availabilityDeadlineDay: number;
   tipPoolEnabled: boolean;
+  tradeDeadlineHours: number;
   managers: Manager[];
 }
 
@@ -36,6 +37,7 @@ export default function EditVenuePage() {
   const [priority, setPriority] = useState(0);
   const [availabilityDeadlineDay, setAvailabilityDeadlineDay] = useState(10);
   const [tipPoolEnabled, setTipPoolEnabled] = useState(false);
+  const [tradeDeadlineHours, setTradeDeadlineHours] = useState(24);
   const [selectedManagerIds, setSelectedManagerIds] = useState<string[]>([]);
 
   const venueId = params.id as string;
@@ -47,8 +49,13 @@ export default function EditVenuePage() {
   }, [status, router]);
 
   useEffect(() => {
-    // Check if user is Super Admin
-    if (status === 'authenticated' && session?.user?.role !== 'SUPER_ADMIN') {
+    // Check if user is Super Admin or Manager
+    if (
+      status === 'authenticated' &&
+      session?.user?.role !== 'SUPER_ADMIN' &&
+      session?.user?.role !== 'MANAGER' &&
+      session?.user?.role !== 'GENERAL_MANAGER'
+    ) {
       router.push('/venues');
     }
   }, [status, session, router]);
@@ -62,6 +69,16 @@ export default function EditVenuePage() {
           throw new Error('Failed to fetch venue');
         }
         const venueData = await venueRes.json();
+        // Check if user is a manager of this venue (if not super admin)
+        if (
+          session?.user?.role !== 'SUPER_ADMIN' &&
+          !venueData.managers.some((m: Manager) => m.id === session?.user?.id)
+        ) {
+          setError('You do not have permission to edit this venue');
+          setLoading(false);
+          return;
+        }
+
         setVenue(venueData);
 
         // Set form values
@@ -70,13 +87,16 @@ export default function EditVenuePage() {
         setPriority(venueData.priority);
         setAvailabilityDeadlineDay(venueData.availabilityDeadlineDay);
         setTipPoolEnabled(venueData.tipPoolEnabled);
+        setTradeDeadlineHours(venueData.tradeDeadlineHours || 24);
         setSelectedManagerIds(venueData.managers.map((m: Manager) => m.id));
 
-        // Fetch all managers
-        const managersRes = await fetch('/api/users?role=MANAGER');
-        if (managersRes.ok) {
-          const managersData = await managersRes.json();
-          setAllManagers(managersData);
+        // Fetch all managers (only for super admins)
+        if (session?.user?.role === 'SUPER_ADMIN') {
+          const managersRes = await fetch('/api/users?role=MANAGER');
+          if (managersRes.ok) {
+            const managersData = await managersRes.json();
+            setAllManagers(managersData);
+          }
         }
       } catch (err) {
         setError(err instanceof Error ? err.message : 'Failed to load venue');
@@ -88,7 +108,7 @@ export default function EditVenuePage() {
     if (status === 'authenticated') {
       fetchData();
     }
-  }, [status, venueId]);
+  }, [status, venueId, session?.user?.id, session?.user?.role]);
 
   function toggleManager(managerId: string) {
     setSelectedManagerIds((prev) =>
@@ -115,7 +135,11 @@ export default function EditVenuePage() {
           priority,
           availabilityDeadlineDay,
           tipPoolEnabled,
-          managerIds: selectedManagerIds,
+          tradeDeadlineHours,
+          // Only include managerIds if user is super admin
+          ...(session?.user?.role === 'SUPER_ADMIN' && {
+            managerIds: selectedManagerIds,
+          }),
         }),
       });
 
@@ -226,11 +250,12 @@ export default function EditVenuePage() {
                   className="checkbox"
                 />
                 <label htmlFor="isNetworked" className="cursor-pointer">
-                  Networked venue
+                  Allow staff to work at multiple venues
                 </label>
               </div>
               <p className="text-xs text-muted-foreground">
-                Networked venues share staff across the network
+                When enabled, staff assigned to this venue can also work at
+                other venues in your group
               </p>
             </div>
           </div>
@@ -279,58 +304,90 @@ export default function EditVenuePage() {
                   className="checkbox"
                 />
                 <label htmlFor="tipPool" className="cursor-pointer">
-                  Enable tip pool
+                  Track tips for this venue
                 </label>
               </div>
               <p className="text-xs text-muted-foreground">
-                When enabled, managers can track and distribute tips for this
-                venue
+                Enable tip tracking so you can enter and distribute tips after
+                each shift
               </p>
             </div>
           </div>
 
-          {/* Manager Assignment */}
+          {/* Trade Settings */}
           <div className="card">
             <div className="card-header">
-              <h2 className="text-xl font-semibold">Assign Managers</h2>
-              <p className="text-sm text-muted-foreground mt-1">
-                Select managers who can schedule shifts at this venue
-              </p>
+              <h2 className="text-xl font-semibold">Shift Trade Settings</h2>
             </div>
-            <div className="card-content">
-              {allManagers.length === 0 ? (
-                <p className="text-sm text-muted-foreground">
-                  No managers available
+            <div className="card-content space-y-4">
+              <div>
+                <label htmlFor="tradeDeadline" className="form-label">
+                  Trade Deadline (Hours Before Shift)
+                </label>
+                <input
+                  type="number"
+                  id="tradeDeadline"
+                  value={tradeDeadlineHours}
+                  onChange={(e) =>
+                    setTradeDeadlineHours(parseInt(e.target.value) || 24)
+                  }
+                  min="0"
+                  max="168"
+                  required
+                  className="input w-full"
+                />
+                <p className="text-xs text-muted-foreground mt-1">
+                  Staff must request trades at least this many hours before the
+                  shift starts (0-168 hours)
                 </p>
-              ) : (
-                <div className="space-y-2">
-                  {allManagers.map((manager) => (
-                    <div
-                      key={manager.id}
-                      className="flex items-center gap-2 p-2 rounded hover:bg-accent"
-                    >
-                      <input
-                        type="checkbox"
-                        id={`manager-${manager.id}`}
-                        checked={selectedManagerIds.includes(manager.id)}
-                        onChange={() => toggleManager(manager.id)}
-                        className="checkbox"
-                      />
-                      <label
-                        htmlFor={`manager-${manager.id}`}
-                        className="cursor-pointer flex-1"
-                      >
-                        <div className="font-medium">{manager.name}</div>
-                        <div className="text-xs text-muted-foreground">
-                          {manager.email}
-                        </div>
-                      </label>
-                    </div>
-                  ))}
-                </div>
-              )}
+              </div>
             </div>
           </div>
+
+          {/* Manager Assignment - Only for Super Admins */}
+          {session?.user?.role === 'SUPER_ADMIN' && (
+            <div className="card">
+              <div className="card-header">
+                <h2 className="text-xl font-semibold">Assign Managers</h2>
+                <p className="text-sm text-muted-foreground mt-1">
+                  Select managers who can schedule shifts at this venue
+                </p>
+              </div>
+              <div className="card-content">
+                {allManagers.length === 0 ? (
+                  <p className="text-sm text-muted-foreground">
+                    No managers available
+                  </p>
+                ) : (
+                  <div className="space-y-2">
+                    {allManagers.map((manager) => (
+                      <div
+                        key={manager.id}
+                        className="flex items-center gap-2 p-2 rounded hover:bg-accent"
+                      >
+                        <input
+                          type="checkbox"
+                          id={`manager-${manager.id}`}
+                          checked={selectedManagerIds.includes(manager.id)}
+                          onChange={() => toggleManager(manager.id)}
+                          className="checkbox"
+                        />
+                        <label
+                          htmlFor={`manager-${manager.id}`}
+                          className="cursor-pointer flex-1"
+                        >
+                          <div className="font-medium">{manager.name}</div>
+                          <div className="text-xs text-muted-foreground">
+                            {manager.email}
+                          </div>
+                        </label>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
 
           {/* Error Message */}
           {error && (

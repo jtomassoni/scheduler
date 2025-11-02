@@ -3,6 +3,7 @@ import { getServerSession } from 'next-auth';
 import { authOptions, isManager } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 import { shiftCreateSchema } from '@/lib/validations';
+import { autoFillShift } from '@/lib/auto-fill-shifts';
 import { z } from 'zod';
 
 /**
@@ -30,7 +31,8 @@ export async function GET(request: NextRequest) {
       assignments?: { some: { userId: string } };
     } = {};
 
-    if (venueId) {
+    // Only filter by venueId if explicitly provided (not empty string)
+    if (venueId && venueId !== 'all' && venueId.trim() !== '') {
       where.venueId = venueId;
     }
 
@@ -134,6 +136,7 @@ export async function POST(request: NextRequest) {
         bartendersRequired: validatedData.bartendersRequired,
         barbacksRequired: validatedData.barbacksRequired,
         leadsRequired: validatedData.leadsRequired,
+        ...(validatedData.eventName && { eventName: validatedData.eventName }),
       },
       include: {
         venue: {
@@ -146,7 +149,59 @@ export async function POST(request: NextRequest) {
       },
     });
 
-    return NextResponse.json(shift, { status: 201 });
+    // Auto-fill shift assignments based on submitted availability
+    try {
+      const autoFillResult = await autoFillShift({
+        shiftId: shift.id,
+        venueId: shift.venueId,
+        date: new Date(validatedData.date),
+        startTime: validatedData.startTime,
+        endTime: validatedData.endTime,
+        bartendersRequired: validatedData.bartendersRequired,
+        barbacksRequired: validatedData.barbacksRequired,
+        leadsRequired: validatedData.leadsRequired,
+      });
+
+      // Reload shift with auto-filled assignments
+      const updatedShift = await prisma.shift.findUnique({
+        where: { id: shift.id },
+        include: {
+          venue: {
+            select: {
+              id: true,
+              name: true,
+            },
+          },
+          assignments: {
+            include: {
+              user: {
+                select: {
+                  id: true,
+                  name: true,
+                  email: true,
+                  role: true,
+                  isLead: true,
+                },
+              },
+            },
+          },
+        },
+      });
+
+      return NextResponse.json(
+        {
+          ...updatedShift,
+          autoFillSummary: autoFillResult.summary,
+          autoFilledCount: autoFillResult.assigned,
+        },
+        { status: 201 }
+      );
+    } catch (autoFillError) {
+      // If auto-fill fails, still return the shift (it was created successfully)
+      // Managers can manually assign staff
+      console.error('Auto-fill failed, but shift was created:', autoFillError);
+      return NextResponse.json(shift, { status: 201 });
+    }
   } catch (error) {
     if (error instanceof z.ZodError) {
       return NextResponse.json(

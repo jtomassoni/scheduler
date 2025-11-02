@@ -85,22 +85,62 @@ export async function GET(request: NextRequest) {
       },
     });
 
-    // Calculate summary
-    const totalTips = tips.reduce((sum, tip) => {
+    // Calculate summary for target user
+    const userTips = tips.filter((tip) => tip.userId === targetUserId);
+    const totalTips = userTips.reduce((sum, tip) => {
       return sum + (tip.tipAmount ? Number(tip.tipAmount) : 0);
     }, 0);
 
     const averageTip =
-      tips.length > 0 ? (totalTips / tips.length).toFixed(2) : '0.00';
+      userTips.length > 0 ? (totalTips / userTips.length).toFixed(2) : '0.00';
+
+    // Calculate average stats across all users in the period (for comparison)
+    const allUserShifts = await prisma.shiftAssignment.groupBy({
+      by: ['userId'],
+      where: {
+        shift: {
+          date: {
+            gte: new Date(startDate),
+            lte: new Date(endDate),
+          },
+        },
+      },
+      _count: {
+        id: true,
+      },
+    });
+
+    const averageShiftsAcrossAllUsers =
+      allUserShifts.length > 0
+        ? (
+            allUserShifts.reduce((sum, stat) => sum + stat._count.id, 0) /
+            allUserShifts.length
+          ).toFixed(1)
+        : '0.0';
+
+    // Get total shifts for target user (not just with tips)
+    const userTotalShifts = await prisma.shiftAssignment.count({
+      where: {
+        userId: targetUserId,
+        shift: {
+          date: {
+            gte: new Date(startDate),
+            lte: new Date(endDate),
+          },
+        },
+      },
+    });
 
     return NextResponse.json({
       startDate,
       endDate,
       userId: targetUserId,
-      totalShifts: tips.length,
+      totalShifts: userTotalShifts,
+      totalShiftsWithTips: userTips.length,
       totalTips: totalTips.toFixed(2),
       averageTip,
-      tips: tips.map((tip) => ({
+      averageShiftsAcrossAllUsers,
+      tips: userTips.map((tip) => ({
         id: tip.id,
         shiftId: tip.shiftId,
         date: tip.shift.date,

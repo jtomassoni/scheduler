@@ -3,6 +3,10 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useSession } from 'next-auth/react';
+import { PremiumLayout, PremiumCard } from '@/components/premium-layout';
+import { UserMenu } from '@/components/user-menu';
+import { Breadcrumb } from '@/components/breadcrumb';
+import { Toast } from '@/components/toast';
 
 interface Notification {
   id: string;
@@ -148,136 +152,178 @@ export default function NotificationsPage() {
 
   if (status === 'loading') {
     return (
-      <div className="min-h-screen bg-background flex items-center justify-center">
-        <p className="text-muted-foreground">Loading...</p>
-      </div>
+      <PremiumLayout>
+        <div className="min-h-screen flex items-center justify-center">
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-purple-500 mx-auto mb-4"></div>
+            <p className="text-gray-400">Loading notifications...</p>
+          </div>
+        </div>
+      </PremiumLayout>
     );
   }
 
   return (
-    <div className="min-h-screen bg-background">
-      <header className="border-b border-border">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
-          <div className="flex items-center justify-between">
-            <div>
-              <h1 className="text-2xl font-bold">Notifications</h1>
-              <p className="text-sm text-muted-foreground">
-                {unreadCount > 0
-                  ? `You have ${unreadCount} unread notification${unreadCount !== 1 ? 's' : ''}`
-                  : 'All caught up!'}
-              </p>
-            </div>
-            <button
-              onClick={() => router.push('/dashboard')}
-              className="btn btn-outline"
-            >
-              Back to Dashboard
-            </button>
-          </div>
-        </div>
-      </header>
-
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {/* Filter and Actions */}
-        <div className="flex items-center justify-between mb-6">
-          <div className="flex gap-2">
-            <button
-              onClick={() => setFilter('all')}
-              className={`btn ${filter === 'all' ? 'btn-primary' : 'btn-outline'}`}
-            >
-              All
-            </button>
-            <button
-              onClick={() => setFilter('unread')}
-              className={`btn ${filter === 'unread' ? 'btn-primary' : 'btn-outline'}`}
-            >
-              Unread ({unreadCount})
-            </button>
-          </div>
-
-          {unreadCount > 0 && (
-            <button onClick={markAllAsRead} className="btn btn-outline">
-              Mark All as Read
-            </button>
-          )}
-        </div>
-
-        {/* Error Display */}
-        {error && (
-          <div className="alert alert-error mb-6" role="alert">
-            {error}
-          </div>
-        )}
-
-        {/* Notifications List */}
-        <div className="space-y-2">
-          {loading ? (
-            <div className="card">
-              <div className="card-content text-center py-8">
-                <p className="text-muted-foreground">
-                  Loading notifications...
+    <PremiumLayout>
+      <div className="relative z-10 min-h-screen">
+        <header className="sticky top-0 z-20 bg-gray-900/80 backdrop-blur-xl border-b border-gray-800/50">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3">
+            <div className="flex items-center justify-between">
+              <div>
+                <h1 className="text-xl sm:text-2xl font-bold bg-gradient-to-r from-purple-400 via-blue-400 to-cyan-400 bg-clip-text text-transparent">
+                  Notifications
+                </h1>
+                <p className="text-xs text-gray-400 mt-1">
+                  {unreadCount > 0
+                    ? `${unreadCount} unread notification${unreadCount !== 1 ? 's' : ''}`
+                    : 'All caught up!'}
                 </p>
               </div>
-            </div>
-          ) : notifications.length === 0 ? (
-            <div className="card">
-              <div className="card-content text-center py-8">
-                <p className="text-muted-foreground">
-                  {filter === 'unread'
-                    ? 'No unread notifications'
-                    : 'No notifications yet'}
-                </p>
+              <div className="flex items-center gap-3">
+                <button
+                  onClick={() => router.push('/dashboard')}
+                  className="px-4 py-2 rounded-lg border border-gray-700 bg-gray-800/50 text-gray-300 font-medium hover:bg-gray-800 transition-all text-sm"
+                >
+                  Back to Dashboard
+                </button>
+                <UserMenu />
               </div>
             </div>
-          ) : (
-            notifications.map((notification) => (
-              <div
-                key={notification.id}
-                className={`card cursor-pointer transition-colors ${
-                  !notification.read ? 'bg-accent/50' : ''
+          </div>
+        </header>
+
+        <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
+          <Breadcrumb />
+          {/* Filter and Actions */}
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex gap-2">
+              <button
+                onClick={() => setFilter('all')}
+                className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-all ${
+                  filter === 'all'
+                    ? 'bg-purple-600 text-white'
+                    : 'border border-gray-700 bg-gray-800/50 text-gray-300 hover:bg-gray-800'
                 }`}
-                onClick={() =>
-                  !notification.read && markAsRead(notification.id)
-                }
               >
-                <div className="card-content py-4">
-                  <div className="flex items-start gap-4">
-                    <div className="text-3xl flex-shrink-0">
-                      {getNotificationIcon(notification.type)}
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-start justify-between gap-2">
-                        <h3
-                          className={`font-semibold ${!notification.read ? 'text-primary' : ''}`}
-                        >
-                          {notification.title}
-                        </h3>
-                        {!notification.read && (
-                          <span className="inline-block w-2 h-2 rounded-full bg-primary flex-shrink-0 mt-2" />
-                        )}
+                All
+              </button>
+              <button
+                onClick={() => setFilter('unread')}
+                className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-all ${
+                  filter === 'unread'
+                    ? 'bg-purple-600 text-white'
+                    : 'border border-gray-700 bg-gray-800/50 text-gray-300 hover:bg-gray-800'
+                }`}
+              >
+                Unread ({unreadCount})
+              </button>
+            </div>
+
+            {unreadCount > 0 && (
+              <button
+                onClick={markAllAsRead}
+                className="px-4 py-2 rounded-lg border border-gray-700 bg-gray-800/50 text-gray-300 font-medium hover:bg-gray-800 transition-all text-sm"
+              >
+                Mark All as Read
+              </button>
+            )}
+          </div>
+
+          {/* Error Display */}
+          {error && (
+            <Toast
+              message={error}
+              type="error"
+              onClose={() => setError('')}
+              duration={5000}
+            />
+          )}
+
+          {/* Notifications List */}
+          <div className="space-y-3">
+            {loading ? (
+              <PremiumCard>
+                <div className="p-8 text-center">
+                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-purple-500 mx-auto mb-4"></div>
+                  <p className="text-gray-400">Loading notifications...</p>
+                </div>
+              </PremiumCard>
+            ) : notifications.length === 0 ? (
+              <PremiumCard>
+                <div className="p-8 text-center">
+                  <p className="text-gray-400">
+                    {filter === 'unread'
+                      ? 'No unread notifications'
+                      : 'No notifications yet'}
+                  </p>
+                </div>
+              </PremiumCard>
+            ) : (
+              notifications.map((notification) => (
+                <PremiumCard
+                  key={notification.id}
+                  className={`transition-all hover:border-purple-500/30 ${
+                    !notification.read
+                      ? 'border-purple-500/20 bg-purple-500/5'
+                      : ''
+                  }`}
+                >
+                  <div className="p-4">
+                    <div className="flex items-start gap-4">
+                      <div className="text-2xl flex-shrink-0">
+                        {getNotificationIcon(notification.type)}
                       </div>
-                      <p className="text-sm text-muted-foreground mt-1">
-                        {notification.message}
-                      </p>
-                      <p className="text-xs text-muted-foreground mt-2">
-                        {new Date(notification.sentAt).toLocaleString(
-                          'default',
-                          {
-                            month: 'short',
-                            day: 'numeric',
-                            hour: 'numeric',
-                            minute: '2-digit',
-                          }
-                        )}
-                      </p>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-start justify-between gap-2">
+                          <h3
+                            className={`text-base font-semibold ${
+                              !notification.read
+                                ? 'text-purple-300'
+                                : 'text-gray-200'
+                            }`}
+                          >
+                            {notification.title}
+                          </h3>
+                          {!notification.read && (
+                            <span className="inline-block w-2 h-2 rounded-full bg-purple-400 flex-shrink-0 mt-2" />
+                          )}
+                        </div>
+                        <p className="text-sm text-gray-400 mt-1">
+                          {notification.message}
+                        </p>
+                        <div className="flex items-center justify-between mt-2">
+                          <p className="text-xs text-gray-500">
+                            {new Date(notification.sentAt).toLocaleString(
+                              'default',
+                              {
+                                month: 'short',
+                                day: 'numeric',
+                                hour: 'numeric',
+                                minute: '2-digit',
+                              }
+                            )}
+                          </p>
+                          {!notification.read && (
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                markAsRead(notification.id);
+                              }}
+                              className="px-3 py-1 rounded-lg border border-gray-700 bg-gray-800/50 text-gray-300 text-xs font-medium hover:bg-gray-800 hover:border-purple-500/50 transition-all"
+                            >
+                              Mark as Read
+                            </button>
+                          )}
+                        </div>
+                      </div>
                     </div>
                   </div>
-                </div>
-              </div>
-            ))
-          )}
-        </div>
-      </main>
-    </div>
+                </PremiumCard>
+              ))
+            )}
+          </div>
+        </main>
+      </div>
+    </PremiumLayout>
   );
 }

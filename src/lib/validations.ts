@@ -23,6 +23,11 @@ export const userCreateSchema = z.object({
 export const userUpdateSchema = userCreateSchema.partial().extend({
   id: z.string(),
   status: z.nativeEnum(UserStatus).optional(),
+  preferredVenuesOrder: z.array(z.string()).optional(),
+  venueRankings: z
+    .record(z.string(), z.number().int().min(1))
+    .optional()
+    .nullable(), // { "venueId": rankingNumber }
 });
 
 // Profile update schema (for user self-service profile updates)
@@ -45,13 +50,6 @@ export const profileUpdateSchema = z.object({
     .object({
       email: z.boolean().optional(),
       push: z.boolean().optional(),
-      quietHours: z
-        .object({
-          enabled: z.boolean(),
-          startTime: z.string().regex(/^([01]\d|2[0-3]):([0-5]\d)$/),
-          endTime: z.string().regex(/^([01]\d|2[0-3]):([0-5]\d)$/),
-        })
-        .optional(),
     })
     .optional()
     .nullable(),
@@ -65,8 +63,10 @@ export const venueCreateSchema = z.object({
     .max(100, 'Name is too long'),
   isNetworked: z.boolean().default(true),
   priority: z.number().int().min(0).default(0),
+  status: z.enum(['ACTIVE', 'INACTIVE']).default('ACTIVE'),
   availabilityDeadlineDay: z.number().int().min(1).max(28).default(10),
   tipPoolEnabled: z.boolean().default(false),
+  tradeDeadlineHours: z.number().int().min(0).max(168).default(24), // 0-168 hours (0-7 days)
   managerIds: z.array(z.string()).optional(),
 });
 
@@ -87,10 +87,12 @@ export const shiftCreateSchema = z.object({
   bartendersRequired: z.number().int().min(0).default(1),
   barbacksRequired: z.number().int().min(0).default(0),
   leadsRequired: z.number().int().min(0).default(0),
+  eventName: z.string().min(1, 'Event name is required'),
 });
 
 export const shiftUpdateSchema = shiftCreateSchema.partial().extend({
   id: z.string(),
+  eventName: z.string().min(1, 'Event name is required'), // Required even in updates
 });
 
 // Shift assignment validation schemas

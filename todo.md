@@ -289,3 +289,156 @@ _Last updated: 2025-10-29 UTC_
 - [x] 2025-10-31 (PENDING) Improved button spacing (space-y-3 vs space-y-2)
 - [x] 2025-10-31 (PENDING) Reduced gap on mobile grids (gap-1 mobile, gap-2 desktop)
 - [x] 2025-10-31 (PENDING) Alert component styles for consistent messaging
+
+---
+
+## Phase 13: Shift Swaps, On-Call, and Cuts (IN PROGRESS)
+
+### Priority 1: Foundation & Parsing (Low-Medium Complexity)
+
+- [ ] (DB) Add onCall status field to ShiftAssignment model
+- [ ] (DB) Add cut status and cutReason fields to ShiftAssignment model
+- [ ] (DB) Add cutAt timestamp and cutBy userId to ShiftAssignment model
+- [ ] (DB) Add swapChain field (JSON array) to ShiftAssignment to track swap history
+- [ ] (PARSER) Update historic schedule CSV parser to recognize swap chains (e.g., "ROSS - MEEG -JAMES B")
+- [ ] (PARSER) Parse simple swaps (e.g., "STEPH C - ROSS") as two-person chains
+- [ ] (PARSER) Parse cuts (e.g., "MARIO - CUT") and flag as cut assignments
+- [ ] (VAL) Validate swap chains: each person must exist in system
+- [ ] (API) Store swap chains in HistoricSchedule data when parsing
+
+### Priority 2: On-Call System (Medium Complexity)
+
+- [ ] (UI) Manager: Mark/unmark staff as "on-call" when assigning to shift
+- [ ] (UI) Manager: Visual indicator (badge/icon) for on-call assignments in scheduler
+- [ ] (UI) Staff: View on-call status in shift details
+- [ ] (API) ShiftAssignment create/update endpoint: accept onCall boolean
+- [ ] (API) Bulk mark on-call endpoint: mark all assignments for a shift as on-call
+- [ ] (VAL) Allow marking as on-call during or after assignment creation
+- [ ] (UI) Manager: List view showing all on-call staff across shifts
+- [ ] (UI) Manager: Filter shifts by on-call status
+
+### Priority 3: User Notification Preferences (Medium Complexity)
+
+- [ ] (DB) Add notificationChannels field to User model (JSON: {sms: bool, email: bool, push: bool})
+- [ ] (UI) User profile: Notification channels section (SMS, Email, App/Push checkboxes)
+- [ ] (UI) User profile: "All three" quick toggle option
+- [ ] (VAL) At least one channel must be enabled
+- [ ] (API) Update profile endpoint: accept notificationChannels
+- [ ] (LOGIC) Notification service: respect user's channel preferences when sending
+- [ ] (UI) User profile: Show current notification preferences with visual indicators
+
+### Priority 4: Cut Functionality - Individual Cuts (Medium-High Complexity)
+
+- [ ] (UI) Manager: "Cut" button/action on shift assignment card
+- [ ] (UI) Manager: Cut confirmation modal with reason field (optional)
+- [ ] (UI) Manager: Visual indicator for cut assignments (strikethrough, badge, different color)
+- [ ] (API) Cut assignment endpoint (PATCH /api/shifts/[id]/assignments/[assignmentId]/cut)
+- [ ] (VAL) Can cut any assignment (on-call or regular)
+- [ ] (VAL) Prevent duplicate cuts (can't cut already-cut assignment)
+- [ ] (LOGIC) When cut, remove from active assignments but keep in history
+- [ ] (LOGIC) Track who cut and when in audit log
+- [ ] (UI) Staff: Visual indicator if their assignment was cut
+- [ ] (UI) Manager: List of cut assignments with cut reason and timestamp
+
+### Priority 5: Cut Functionality - Bulk Cuts (High Complexity)
+
+- [ ] (UI) Manager: "Cut All On-Call" button on shift detail page
+- [ ] (UI) Manager: Confirmation modal showing list of on-call staff to be cut
+- [ ] (API) Bulk cut endpoint (POST /api/shifts/[id]/cut-oncall)
+- [ ] (VAL) Only cuts assignments marked as on-call
+- [ ] (LOGIC) Batch cut multiple assignments in single transaction
+- [ ] (LOGIC) Apply same cut reason to all bulk cuts
+- [ ] (UI) Manager: Bulk cut history/audit log
+- [ ] (UI) Manager: Undo bulk cut (restore on-call assignments) within time window
+
+### Priority 6: Cut Notifications - Email & Push (High Complexity)
+
+- [ ] (NOTIF) New notification type: STAFF_CUT
+- [ ] (LOGIC) When assignment cut: check user's notification preferences
+- [ ] (LOGIC) Send email notification if user has email enabled
+- [ ] (LOGIC) Send push notification if user has push enabled
+- [ ] (EMAIL) Cut notification email template (includes shift details, reason if provided)
+- [ ] (PUSH) Cut notification push payload (title, body, action data)
+- [ ] (LOGIC) Respect quiet hours for push notifications (queue for email)
+- [ ] (LOGIC) Bulk cut notifications: send to all affected users
+- [ ] (UI) Staff: View cut notifications in notifications page
+- [ ] (TEST) Test cut notifications across all channel combinations
+
+### Priority 7: Cut Notifications - SMS Integration (Very High Complexity)
+
+- [ ] (RESEARCH) Choose SMS provider (Twilio, AWS SNS, MessageBird, etc.)
+- [ ] (ENV) Add SMS API credentials to environment variables
+- [ ] (DEPS) Install SMS service SDK/library
+- [ ] (API) SMS service utility/wrapper function
+- [ ] (LOGIC) When assignment cut: send SMS if user has SMS enabled and phone number
+- [ ] (DB) Add phoneNumber field to User model (optional, for SMS)
+- [ ] (UI) User profile: Phone number input field with validation
+- [ ] (VAL) Phone number format validation (E.164 format recommended)
+- [ ] (LOGIC) SMS notification service integration with error handling
+- [ ] (LOGIC) Fallback to email if SMS fails
+- [ ] (LOGIC) Rate limiting for SMS to prevent spam/abuse
+- [ ] (LOGIC) SMS delivery status tracking (optional)
+- [ ] (TEST) Test SMS notifications end-to-end
+
+### Priority 8: Swap Chain Display & History (Medium Complexity)
+
+- [ ] (UI) Shift assignment: Display swap chain if present (e.g., "Originally: ROSS → MEEG → JAMES B")
+- [ ] (UI) Shift assignment: Show original assignee vs current assignee if swapped
+- [ ] (API) Track swap chain when assignment changes (add to chain array)
+- [ ] (LOGIC) Build swap chain history from assignment updates
+- [ ] (UI) Manager: View swap chain history for any assignment
+- [ ] (UI) Audit log: Include swap chain information
+- [ ] (REPORT) Add swap frequency to equity reports (optional)
+
+### Priority 9: Ticket Sales Integration (Future - Very High Complexity)
+
+- [ ] (SPEC) Define integration API contract with ticket sales system
+- [ ] (API) Webhook endpoint to receive ticket sales updates
+- [ ] (LOGIC) Calculate projections vs actual sales
+- [ ] (LOGIC) Auto-cut on-call staff if projections below threshold
+- [ ] (UI) Manager: Configure auto-cut thresholds per venue/shift type
+- [ ] (UI) Manager: Override auto-cut decisions manually
+- [ ] (LOGIC) Notification sent when auto-cut triggered
+- [ ] (LOG) Audit trail for all auto-cuts with reason (low sales)
+
+### Priority 10: Testing & Polish (Medium Complexity)
+
+- [ ] (TEST) Test swap chain parsing with various formats
+- [ ] (TEST) Test on-call marking and bulk operations
+- [ ] (TEST) Test individual and bulk cuts
+- [ ] (TEST) Test all notification channels independently and combined
+- [ ] (TEST) Test cut undo functionality
+- [ ] (TEST) Test edge cases: cutting already-cut, cutting non-oncall, etc.
+- [ ] (UI) Improve visual design for cut/on-call indicators
+- [ ] (DOC) Document on-call and cut workflows for managers
+- [ ] (DOC) Document notification preferences for staff
+
+---
+
+## Notes
+
+### Shift Swap Chain Format
+
+- `"ROSS - MEEG -JAMES B"` = Chain: ROSS → MEEG → JAMES B (2 swaps)
+- `"STEPH C - ROSS"` = Simple swap: STEPH C → ROSS (1 swap)
+- Parsed from CSV and stored in swapChain JSON array
+
+### Cut Format
+
+- `"MARIO - CUT"` = Mario was scheduled but cut
+- Can be on-call or regular assignment
+- Requires notification to affected staff
+
+### Notification Channels
+
+- SMS: Requires phone number and SMS service integration
+- Email: Existing infrastructure (needs actual email service)
+- App/Push: Existing infrastructure (needs VAPID keys)
+- Users can enable any combination or all three
+
+### On-Call System
+
+- `"AVERY(OC) - CUT"` = Avery was scheduled as on-call but cut
+- Staff can be marked as "on-call" when assigned
+- Managers can cut all on-call staff at once if ticket sales are low
+- Individual cuts can happen to anyone (on-call or not)

@@ -12,6 +12,7 @@ datasource db {
 
 enum Role {
   SUPER_ADMIN
+  GENERAL_MANAGER
   MANAGER
   BARTENDER
   BARBACK
@@ -64,10 +65,20 @@ model User {
   dayJobCutoff         String? // Time string, e.g., "16:59"
   isLead               Boolean  @default(false)
   preferredVenuesOrder String[] // Array of venue IDs in order
+  
+  // Ranking/priority for auto-scheduling (venue-specific)
+  // Format: { "venueId": number } where lower number = higher priority
+  // Example: { "venue1": 1, "venue2": 3 } means user is priority 1 at venue1, priority 3 at venue2
+  venueRankings Json? // { "venueId": rankingNumber }
 
   // Availability defaults
   defaultAvailability    Json? // JSON structure for recurring availability
   autoSubmitAvailability Boolean @default(false)
+  
+  // Custom availability deadline exceptions
+  // Format: { "venueId": { "deadlineDay": number, "reason": string } }
+  // If set, user uses custom deadline instead of venue default for that venue
+  customAvailabilityDeadlines Json? // { "venueId": { "deadlineDay": 15, "reason": "Special arrangement" } }
 
   // Notification preferences
   notificationPrefs Json? // { email: bool, push: bool, quietHours: {...} }
@@ -86,6 +97,8 @@ model User {
   notifications          Notification[]
   tipPayouts             TipPayout[]
   auditLogs              AuditLog[]
+  historicSchedules      HistoricSchedule[] @relation("HistoricScheduleUploader")
+  reviewedCompanyRequests CompanyRequest[]   @relation("CompanyRequestReviewer")
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -95,22 +108,30 @@ model User {
   @@index([status])
 }
 
+enum VenueStatus {
+  ACTIVE
+  INACTIVE
+}
+
 model Venue {
-  id          String  @id @default(cuid())
+  id          String      @id @default(cuid())
   name        String
-  isNetworked Boolean @default(true)
-  priority    Int     @default(0)
+  isNetworked Boolean     @default(true)
+  priority    Int         @default(0)
+  status      VenueStatus @default(ACTIVE)
 
   // Configuration
   availabilityDeadlineDay Int     @default(10) // Day of month
   tipPoolEnabled          Boolean @default(false)
+  tradeDeadlineHours     Int     @default(24) // Minimum hours before shift start that trades can be requested
 
   // Relations
   managers    User[] @relation("VenueManagers")
   createdBy   User   @relation("VenueCreator", fields: [createdById], references: [id])
   createdById String
 
-  shifts Shift[]
+  shifts            Shift[]
+  historicSchedules HistoricSchedule[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -128,6 +149,7 @@ model Shift {
   date      DateTime // Date of shift
   startTime String // Time string, e.g., "18:00"
   endTime   String // Time string, e.g., "02:00"
+  eventName String? // Optional event/concert name
 
   // Requirements
   bartendersRequired Int @default(1)
@@ -138,6 +160,12 @@ model Shift {
   tipsPublished   Boolean  @default(false)
   tipsPublishedAt DateTime?
   tipsPublishedBy String?
+  
+  // Shift up for trade (marketplace model)
+  upForTrade       Boolean   @default(false)
+  upForTradeAt     DateTime?
+  upForTradeBy     String?
+  upForTradeReason String?
   
   // Relations
   assignments ShiftAssignment[]
@@ -163,6 +191,7 @@ model ShiftAssignment {
 
   role   Role // BARTENDER or BARBACK
   isLead Boolean @default(false)
+  isOnCall Boolean @default(false)
 
   // Tip pool
   tipAmount    Decimal?  @db.Decimal(10, 2)
@@ -370,5 +399,73 @@ model AuditLog {
 
   @@index([userId])
   @@index([entity, entityId])
+  @@index([createdAt])
+}
+
+model HistoricSchedule {
+  id String @id @default(cuid())
+
+  // Uploaded by manager/admin
+  uploadedBy   User   @relation("HistoricScheduleUploader", fields: [uploadedById], references: [id])
+  uploadedById String
+
+  venue   Venue?  @relation(fields: [venueId], references: [id], onDelete: Cascade)
+  venueId String? // Optional - can be organization-wide baseline
+
+  // Schedule period
+  periodStart DateTime
+  periodEnd   DateTime
+  periodName  String? // e.g., "September 2025", "Q3 2025"
+
+  // Parsed data: Array of shifts with user assignments
+  // Format: [{ date, startTime, endTime, userId, userName, role, isLead, venueName? }]
+  data Json
+
+  // Metadata
+  fileName    String?
+  source      String @default("excel") // "excel", "csv", "manual"
+  notes       String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([uploadedById])
+  @@index([venueId])
+  @@index([periodStart, periodEnd])
+}
+
+enum CompanyRequestStatus {
+  PENDING
+  REVIEWED
+  APPROVED
+  DECLINED
+}
+
+model CompanyRequest {
+  id String @id @default(cuid())
+
+  // Contact information
+  companyName  String
+  contactName  String
+  contactEmail String
+  contactPhone String?
+
+  // Business details
+  numberOfVenues   Int
+  estimatedUsers   Int
+  additionalNotes   String?
+
+  // Admin tracking
+  status       CompanyRequestStatus @default(PENDING)
+  reviewedBy   User?                @relation("CompanyRequestReviewer", fields: [reviewedById], references: [id])
+  reviewedById String?
+  reviewedAt   DateTime?
+  adminNotes   Json? // Array of { text: string, timestamp: DateTime, addedById: string } objects
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([status])
+  @@index([reviewedById])
   @@index([createdAt])
 }

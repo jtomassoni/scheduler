@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
-import { authOptions, isSuperAdmin } from '@/lib/auth';
+import { authOptions, isSuperAdmin, isManager } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 import { venueUpdateSchema } from '@/lib/validations';
 import { z } from 'zod';
@@ -70,12 +70,37 @@ export async function PATCH(
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    // Only Super Admin can update venues
-    if (!isSuperAdmin(session.user.role)) {
-      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+    const body = await request.json();
+
+    // Check if user is Super Admin or a manager of this venue
+    const venue = await prisma.venue.findUnique({
+      where: { id: params.id },
+      include: {
+        managers: {
+          select: {
+            id: true,
+          },
+        },
+      },
+    });
+
+    if (!venue) {
+      return NextResponse.json({ error: 'Venue not found' }, { status: 404 });
     }
 
-    const body = await request.json();
+    const isVenueManager = venue.managers.some(
+      (manager) => manager.id === session.user.id
+    );
+
+    if (!isSuperAdmin(session.user.role) && !isVenueManager) {
+      return NextResponse.json(
+        { error: 'Forbidden: You can only edit venues you manage' },
+        { status: 403 }
+      );
+    }
+
+    // Super admins can update manager assignments, managers cannot
+    const canUpdateManagers = isSuperAdmin(session.user.role);
 
     // Validate request body
     const validatedData = venueUpdateSchema.parse({ ...body, id: params.id });
@@ -89,16 +114,22 @@ export async function PATCH(
       ...(validatedData.priority !== undefined && {
         priority: validatedData.priority,
       }),
+      ...(validatedData.status !== undefined && {
+        status: validatedData.status,
+      }),
       ...(validatedData.availabilityDeadlineDay !== undefined && {
         availabilityDeadlineDay: validatedData.availabilityDeadlineDay,
       }),
       ...(validatedData.tipPoolEnabled !== undefined && {
         tipPoolEnabled: validatedData.tipPoolEnabled,
       }),
+      ...(validatedData.tradeDeadlineHours !== undefined && {
+        tradeDeadlineHours: validatedData.tradeDeadlineHours,
+      }),
     };
 
-    // Handle manager assignments if provided
-    if (validatedData.managerIds) {
+    // Handle manager assignments if provided (only super admins can modify)
+    if (validatedData.managerIds && canUpdateManagers) {
       updateData.managers = {
         set: validatedData.managerIds.map((id) => ({ id })),
       };

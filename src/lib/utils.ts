@@ -8,6 +8,48 @@ export function cn(...inputs: ClassValue[]) {
 }
 
 /**
+ * Properly capitalizes a name (handles "Mc", "O'", hyphens, etc.)
+ */
+export function formatName(name: string): string {
+  if (!name) return '';
+
+  // Split by spaces, hyphens, apostrophes
+  return name
+    .split(/([\s\-'\.])/)
+    .map((part) => {
+      // Skip delimiters
+      if (part.match(/^[\s\-'\.]$/)) return part;
+
+      // Handle special prefixes
+      if (part.toLowerCase().startsWith('mc') && part.length > 2) {
+        return (
+          'Mc' +
+          part.slice(2).charAt(0).toUpperCase() +
+          part.slice(3).toLowerCase()
+        );
+      }
+      if (part.toLowerCase().startsWith("o'") && part.length > 2) {
+        return (
+          "O'" +
+          part.slice(2).charAt(0).toUpperCase() +
+          part.slice(3).toLowerCase()
+        );
+      }
+      if (part.toLowerCase().startsWith('mac') && part.length > 3) {
+        return (
+          'Mac' +
+          part.slice(3).charAt(0).toUpperCase() +
+          part.slice(4).toLowerCase()
+        );
+      }
+
+      // Capitalize first letter, lowercase rest
+      return part.charAt(0).toUpperCase() + part.slice(1).toLowerCase();
+    })
+    .join('');
+}
+
+/**
  * Format time string (HH:MM) to 12-hour format
  */
 export function formatTime12Hour(time: string): string {

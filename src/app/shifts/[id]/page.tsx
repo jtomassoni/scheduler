@@ -3,6 +3,11 @@
 import { useEffect, useState } from 'react';
 import { useRouter, useParams } from 'next/navigation';
 import { useSession } from 'next-auth/react';
+import { PremiumLayout, PremiumCard } from '@/components/premium-layout';
+import { UserMenu } from '@/components/user-menu';
+import { Breadcrumb } from '@/components/breadcrumb';
+import { Toast } from '@/components/toast';
+import { formatTime12Hour } from '@/lib/utils';
 
 interface User {
   id: string;
@@ -10,6 +15,7 @@ interface User {
   email: string;
   role: string;
   isLead: boolean;
+  preferredVenuesOrder?: string[];
 }
 
 interface ShiftAssignment {
@@ -17,6 +23,7 @@ interface ShiftAssignment {
   user: User;
   role: string;
   isLead: boolean;
+  isOnCall?: boolean;
   tipAmount?: number | null;
   tipEnteredAt?: string | null;
   tipUpdatedAt?: string | null;
@@ -30,13 +37,19 @@ interface Shift {
   bartendersRequired: number;
   barbacksRequired: number;
   leadsRequired: number;
+  eventName?: string | null;
   tipsPublished: boolean;
   tipsPublishedAt?: string | null;
   tipsPublishedBy?: string | null;
+  upForTrade: boolean;
+  upForTradeAt?: string | null;
+  upForTradeBy?: string | null;
+  upForTradeReason?: string | null;
   venue: {
     id: string;
     name: string;
     tipPoolEnabled: boolean;
+    isNetworked: boolean;
   };
   assignments: ShiftAssignment[];
 }
@@ -49,12 +62,26 @@ export default function ShiftDetailPage() {
   const [availableUsers, setAvailableUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [success, setSuccess] = useState('');
   const [showAssignModal, setShowAssignModal] = useState(false);
   const [selectedUserId, setSelectedUserId] = useState('');
   const [selectedRole, setSelectedRole] = useState<'BARTENDER' | 'BARBACK'>(
     'BARTENDER'
   );
   const [selectedIsLead, setSelectedIsLead] = useState(false);
+
+  // Update role and lead checkbox when user is selected
+  useEffect(() => {
+    if (selectedUserId) {
+      const selectedUser = availableUsers.find((u) => u.id === selectedUserId);
+      if (selectedUser) {
+        // Auto-set role based on user's default role
+        setSelectedRole(selectedUser.role as 'BARTENDER' | 'BARBACK');
+        // Reset lead checkbox when changing users
+        setSelectedIsLead(false);
+      }
+    }
+  }, [selectedUserId, availableUsers]);
   const [assigning, setAssigning] = useState(false);
   const [validationErrors, setValidationErrors] = useState<
     Array<{
@@ -66,18 +93,40 @@ export default function ShiftDetailPage() {
   >([]);
   const [showOverrideModal, setShowOverrideModal] = useState(false);
   const [overrideReason, setOverrideReason] = useState('');
-  const [showTradeModal, setShowTradeModal] = useState(false);
-  const [selectedTradeReceiver, setSelectedTradeReceiver] = useState('');
+  const [puttingUpForTrade, setPuttingUpForTrade] = useState(false);
   const [tradeReason, setTradeReason] = useState('');
-  const [trading, setTrading] = useState(false);
   const [showTipModal, setShowTipModal] = useState(false);
-  const [tipAmounts, setTipAmounts] = useState<Record<string, string>>({});
+  const [totalTipPool, setTotalTipPool] = useState<string>('');
   const [savingTips, setSavingTips] = useState(false);
-  const [publishingTips, setPublishingTips] = useState(false);
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [editingShift, setEditingShift] = useState(false);
+  const [venues, setVenues] = useState<
+    Array<{ id: string; name: string; managers?: Array<{ id: string }> }>
+  >([]);
+  const [availableVenues, setAvailableVenues] = useState<
+    Array<{ id: string; name: string }>
+  >([]);
+  const [editFormData, setEditFormData] = useState({
+    venueId: '',
+    date: '',
+    startTime: '',
+    eventName: '',
+    bartendersRequired: '',
+    barbacksRequired: '',
+    leadsRequired: '',
+    tipAmount: '',
+  });
 
-  const shiftId = params.id as string;
+  // Handle params which might be a Promise in Next.js App Router
+  const shiftId =
+    typeof params.id === 'string' ? params.id : params.id?.[0] || '';
+  const userRole = session?.user?.role as string | undefined;
   const isManager =
-    session?.user?.role === 'MANAGER' || session?.user?.role === 'SUPER_ADMIN';
+    userRole === 'MANAGER' ||
+    userRole === 'GENERAL_MANAGER' ||
+    userRole === 'SUPER_ADMIN';
+  const isSuperAdmin = userRole === 'SUPER_ADMIN';
+  const isStaff = userRole === 'BARTENDER' || userRole === 'BARBACK';
 
   useEffect(() => {
     if (status === 'unauthenticated') {
@@ -89,25 +138,132 @@ export default function ShiftDetailPage() {
     async function fetchData() {
       try {
         // Fetch shift details
-        const shiftRes = await fetch(`/api/shifts/${shiftId}`);
-        if (!shiftRes.ok) {
-          throw new Error('Failed to fetch shift');
+        if (!shiftId) {
+          setError('Invalid shift ID');
+          setLoading(false);
+          return;
         }
-        const shiftData = await shiftRes.json();
-        setShift(shiftData);
 
-        // Fetch available users (bartenders and barbacks)
-        const usersRes = await fetch('/api/users');
-        if (usersRes.ok) {
-          const usersData = await usersRes.json();
-          setAvailableUsers(
-            usersData.filter(
-              (u: User) => u.role === 'BARTENDER' || u.role === 'BARBACK'
-            )
-          );
+        console.log('Fetching shift with ID:', shiftId);
+
+        try {
+          const shiftRes = await fetch(`/api/shifts/${shiftId}`, {
+            method: 'GET',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            credentials: 'include', // Include cookies for auth
+          });
+          console.log('Shift fetch response status:', shiftRes.status);
+
+          if (!shiftRes.ok) {
+            let errorData;
+            try {
+              errorData = await shiftRes.json();
+            } catch {
+              errorData = {
+                error: `HTTP ${shiftRes.status}: ${shiftRes.statusText}`,
+              };
+            }
+            console.error('Shift fetch error:', errorData);
+            console.error('Full error response:', {
+              status: shiftRes.status,
+              statusText: shiftRes.statusText,
+              error: errorData,
+            });
+            throw new Error(
+              errorData.error || `Failed to fetch shift (${shiftRes.status})`
+            );
+          }
+
+          const shiftData = await shiftRes.json();
+          console.log('Shift data received:', shiftData);
+
+          if (!shiftData || !shiftData.id) {
+            console.error('Invalid shift data:', shiftData);
+            throw new Error('Shift not found');
+          }
+
+          setShift(shiftData);
+
+          // Initialize edit form with current shift data
+          if (shiftData) {
+            const shiftDate = new Date(shiftData.date);
+            const tipAmount =
+              shiftData.assignments &&
+              shiftData.assignments.length > 0 &&
+              shiftData.assignments[0].tipAmount
+                ? Number(shiftData.assignments[0].tipAmount).toFixed(2)
+                : '';
+            setEditFormData({
+              venueId: shiftData.venue.id,
+              date: shiftDate.toISOString().split('T')[0],
+              startTime: shiftData.startTime,
+              eventName: shiftData.eventName || '',
+              bartendersRequired: String(shiftData.bartendersRequired || 0),
+              barbacksRequired: String(shiftData.barbacksRequired || 0),
+              leadsRequired: String(shiftData.leadsRequired || 0),
+              tipAmount: tipAmount,
+            });
+          }
+
+          // Fetch venues
+          const venuesRes = await fetch('/api/venues');
+          if (venuesRes.ok) {
+            const venuesData = await venuesRes.json();
+            setVenues(venuesData);
+
+            // Filter venues based on user permissions
+            if (isSuperAdmin) {
+              // Super admins can see all venues
+              setAvailableVenues(venuesData);
+            } else if (isManager) {
+              // Managers can only see venues they manage
+              const managedVenues = venuesData.filter(
+                (venue: { managers?: Array<{ id: string }> }) =>
+                  venue.managers?.some(
+                    (manager) => manager.id === session?.user?.id
+                  )
+              );
+              setAvailableVenues(managedVenues);
+            } else {
+              // Regular staff see no venues for editing
+              setAvailableVenues([]);
+            }
+          }
+
+          // Fetch available users (only if manager - for assigning staff)
+          // Filter to only include users who work at this venue
+          if (isManager && shiftData.venue) {
+            const usersRes = await fetch('/api/users');
+            if (usersRes.ok) {
+              const usersData = await usersRes.json();
+              setAvailableUsers(
+                usersData.filter(
+                  (u: User) =>
+                    (u.role === 'BARTENDER' || u.role === 'BARBACK') &&
+                    // Check if user has this venue in their preferred venues
+                    u.preferredVenuesOrder &&
+                    Array.isArray(u.preferredVenuesOrder) &&
+                    u.preferredVenuesOrder.includes(shiftData.venue.id)
+                )
+              );
+            }
+          }
+        } catch (fetchError) {
+          // Handle network errors or other fetch failures
+          console.error('Fetch error:', fetchError);
+          if (fetchError instanceof Error) {
+            throw fetchError;
+          }
+          throw new Error('Network error: Could not connect to server');
         }
       } catch (err) {
-        setError(err instanceof Error ? err.message : 'Failed to load shift');
+        console.error('Error in fetchData:', err);
+        const errorMessage =
+          err instanceof Error ? err.message : 'Failed to load shift';
+        setError(errorMessage);
+        setShift(null); // Ensure shift is null on error
       } finally {
         setLoading(false);
       }
@@ -116,7 +272,7 @@ export default function ShiftDetailPage() {
     if (status === 'authenticated') {
       fetchData();
     }
-  }, [status, shiftId]);
+  }, [status, shiftId, isManager, isSuperAdmin, session?.user?.id]);
 
   async function handleAssignUser() {
     if (!selectedUserId) return;
@@ -126,30 +282,56 @@ export default function ShiftDetailPage() {
     setValidationErrors([]);
 
     try {
-      const response = await fetch(`/api/shifts/${shiftId}/assignments`, {
+      // For super admins, allow bypassing validation
+      const requestBody: any = {
+        userId: selectedUserId,
+        role: selectedRole,
+        isLead: selectedIsLead,
+      };
+
+      // First attempt - validate normally
+      let response = await fetch(`/api/shifts/${shiftId}/assignments`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({
-          userId: selectedUserId,
-          role: selectedRole,
-          isLead: selectedIsLead,
-        }),
+        body: JSON.stringify(requestBody),
       });
 
       if (!response.ok) {
         const data = await response.json();
         if (data.errors) {
-          // Store validation errors and offer override option
+          // Store validation errors
           setValidationErrors(data.errors);
-          setError(
-            'Validation failed. You can request an override to proceed.'
-          );
-          setAssigning(false);
-          return;
+
+          // For super admins, automatically retry with bypass
+          if (isSuperAdmin) {
+            requestBody.bypassValidation = true;
+            response = await fetch(`/api/shifts/${shiftId}/assignments`, {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+              },
+              body: JSON.stringify(requestBody),
+            });
+
+            if (!response.ok) {
+              const retryData = await response.json();
+              throw new Error(
+                retryData.error || 'Failed to assign user even with bypass'
+              );
+            }
+          } else {
+            // For non-super admins, show override option
+            setError(
+              'Validation failed. You can request an override to proceed.'
+            );
+            setAssigning(false);
+            return;
+          }
+        } else {
+          throw new Error(data.error || 'Failed to assign user');
         }
-        throw new Error(data.error || 'Failed to assign user');
       }
 
       // Refresh shift data
@@ -162,6 +344,7 @@ export default function ShiftDetailPage() {
       setSelectedRole('BARTENDER');
       setSelectedIsLead(false);
       setValidationErrors([]);
+      setError('');
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to assign user');
     } finally {
@@ -227,6 +410,44 @@ export default function ShiftDetailPage() {
     }
   }
 
+  async function handleToggleOnCall(assignmentId: string) {
+    if (!shift) return;
+
+    try {
+      const assignment = shift.assignments.find((a) => a.id === assignmentId);
+      if (!assignment) return;
+
+      const response = await fetch(
+        `/api/shifts/${shiftId}/assignments/${assignmentId}`,
+        {
+          method: 'PATCH',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            isOnCall: !assignment.isOnCall,
+          }),
+        }
+      );
+
+      if (!response.ok) {
+        const data = await response.json();
+        throw new Error(data.error || 'Failed to update on-call status');
+      }
+
+      const updatedAssignment = await response.json();
+
+      // Refresh shift data
+      const shiftRes = await fetch(`/api/shifts/${shiftId}`);
+      const shiftData = await shiftRes.json();
+      setShift(shiftData);
+    } catch (err) {
+      setError(
+        err instanceof Error ? err.message : 'Failed to update on-call status'
+      );
+    }
+  }
+
   async function handleRemoveAssignment(assignmentId: string) {
     if (!confirm('Are you sure you want to remove this assignment?')) {
       return;
@@ -253,12 +474,110 @@ export default function ShiftDetailPage() {
     }
   }
 
-  async function handleProposeTradeClick() {
-    // Check if user is assigned to this shift
+  async function handleUpdateShift() {
     if (!shift) return;
 
+    setEditingShift(true);
+    setError('');
+
+    try {
+      // Update shift details - convert string values to numbers
+      const response = await fetch(`/api/shifts/${shiftId}`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          venueId: editFormData.venueId,
+          date: editFormData.date,
+          startTime: editFormData.startTime,
+          eventName: editFormData.eventName.trim(),
+          bartendersRequired: parseInt(editFormData.bartendersRequired) || 0,
+          barbacksRequired: parseInt(editFormData.barbacksRequired) || 0,
+          leadsRequired: parseInt(editFormData.leadsRequired) || 0,
+        }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response
+          .json()
+          .catch(() => ({ error: 'Failed to update shift' }));
+        throw new Error(errorData.error || 'Failed to update shift');
+      }
+
+      // If tip pool is enabled and tip amount is provided, save tips
+      if (
+        shift.venue.tipPoolEnabled &&
+        shift.assignments.length > 0 &&
+        editFormData.tipAmount
+      ) {
+        const perPersonAmount = parseFloat(editFormData.tipAmount);
+        if (perPersonAmount >= 0) {
+          const tipsResponse = await fetch(`/api/shifts/${shiftId}/tips`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ perPersonAmount }),
+          });
+
+          if (!tipsResponse.ok) {
+            const tipsError = await tipsResponse
+              .json()
+              .catch(() => ({ error: 'Failed to save tips' }));
+            throw new Error(tipsError.error || 'Failed to save tips');
+          }
+        }
+      }
+
+      // Refresh shift data
+      const shiftRes = await fetch(`/api/shifts/${shiftId}`);
+      const shiftData = await shiftRes.json();
+      setShift(shiftData);
+
+      setShowEditModal(false);
+      setSuccess('Shift updated successfully!');
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to update shift');
+    } finally {
+      setEditingShift(false);
+    }
+  }
+
+  async function handleDeleteShift() {
+    if (!shift) return;
+
+    if (
+      !confirm(
+        `Are you sure you want to delete this shift? This action cannot be undone.`
+      )
+    ) {
+      return;
+    }
+
+    try {
+      const response = await fetch(`/api/shifts/${shiftId}`, {
+        method: 'DELETE',
+      });
+
+      if (!response.ok) {
+        const errorData = await response
+          .json()
+          .catch(() => ({ error: 'Failed to delete shift' }));
+        throw new Error(errorData.error || 'Failed to delete shift');
+      }
+
+      router.push('/shifts');
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to delete shift');
+    }
+  }
+
+  async function handlePutUpForTrade() {
+    if (!shift || !session?.user?.id) return;
+
     const userAssignment = shift.assignments.find(
-      (a) => a.user.id === session?.user?.id
+      (a) => a.user.id === session.user.id
     );
 
     if (!userAssignment) {
@@ -266,63 +585,60 @@ export default function ShiftDetailPage() {
       return;
     }
 
-    setShowTradeModal(true);
-  }
-
-  async function handleProposeTrade() {
-    if (!selectedTradeReceiver) {
-      alert('Please select someone to trade with');
+    if (shift.upForTrade) {
+      alert('This shift is already up for trade');
       return;
     }
 
-    setTrading(true);
+    // Optional: Show a simple prompt for reason
+    const reason = prompt(
+      'Optional: Why are you putting this shift up for trade?'
+    );
+
+    setPuttingUpForTrade(true);
     setError('');
 
     try {
-      const response = await fetch('/api/trades', {
+      const response = await fetch(`/api/shifts/${shiftId}/put-up-for-trade`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          shiftId,
-          receiverId: selectedTradeReceiver,
-          reason: tradeReason || null,
+          reason: reason || null,
         }),
       });
 
       if (!response.ok) {
         const data = await response.json();
-        if (data.errors) {
-          const errorMessages = data.errors.join(', ');
-          throw new Error(errorMessages);
-        }
-        throw new Error(data.error || 'Failed to propose trade');
+        throw new Error(data.error || 'Failed to put shift up for trade');
       }
 
-      alert('Trade proposal sent! The other staff member will be notified.');
-      setShowTradeModal(false);
-      setSelectedTradeReceiver('');
-      setTradeReason('');
-      router.push('/trades');
+      const updatedShift = await response.json();
+      setShift(updatedShift);
+
+      alert(
+        'Shift is now up for trade! Eligible staff and managers have been notified.'
+      );
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to propose trade');
+      setError(
+        err instanceof Error ? err.message : 'Failed to put shift up for trade'
+      );
     } finally {
-      setTrading(false);
+      setPuttingUpForTrade(false);
     }
   }
 
   function handleOpenTipModal() {
     if (!shift) return;
 
-    // Initialize tip amounts with existing values
-    const initialAmounts: Record<string, string> = {};
-    shift.assignments.forEach((assignment) => {
-      initialAmounts[assignment.id] = assignment.tipAmount
-        ? String(assignment.tipAmount)
-        : '';
-    });
-    setTipAmounts(initialAmounts);
+    // Get the per-person amount (should be the same for all if set)
+    const perPersonAmount =
+      shift.assignments.length > 0 && shift.assignments[0].tipAmount
+        ? Number(shift.assignments[0].tipAmount)
+        : 0;
+
+    setTotalTipPool(perPersonAmount > 0 ? perPersonAmount.toFixed(2) : '');
     setShowTipModal(true);
   }
 
@@ -333,17 +649,22 @@ export default function ShiftDetailPage() {
     setError('');
 
     try {
-      const tips = shift.assignments.map((assignment) => ({
-        assignmentId: assignment.id,
-        amount: parseFloat(tipAmounts[assignment.id] || '0'),
-      }));
+      const perPersonAmount = parseFloat(totalTipPool || '0');
+
+      if (perPersonAmount < 0) {
+        throw new Error('Tip amount cannot be negative');
+      }
+
+      if (shift.assignments.length === 0) {
+        throw new Error('No staff assigned to this shift');
+      }
 
       const response = await fetch(`/api/shifts/${shiftId}/tips`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ tips }),
+        body: JSON.stringify({ perPersonAmount }),
       });
 
       if (!response.ok) {
@@ -362,32 +683,6 @@ export default function ShiftDetailPage() {
     }
   }
 
-  async function handlePublishTips() {
-    if (!shift) return;
-
-    setPublishingTips(true);
-    setError('');
-
-    try {
-      const response = await fetch(`/api/shifts/${shiftId}/tips/publish`, {
-        method: 'POST',
-      });
-
-      if (!response.ok) {
-        const data = await response.json();
-        throw new Error(data.error || 'Failed to publish tips');
-      }
-
-      const result = await response.json();
-      setShift({ ...shift, ...result.shift });
-      alert('Tips published successfully! Staff have been notified.');
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to publish tips');
-    } finally {
-      setPublishingTips(false);
-    }
-  }
-
   if (loading) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
@@ -396,21 +691,52 @@ export default function ShiftDetailPage() {
     );
   }
 
-  if (!shift) {
+  if (!shift && !loading) {
     return (
-      <div className="min-h-screen bg-background flex items-center justify-center">
-        <div className="text-center">
-          <p className="text-destructive mb-4">Shift not found</p>
-          <button
-            onClick={() => router.push('/shifts')}
-            className="btn btn-primary"
-          >
-            Back to Shifts
-          </button>
+      <PremiumLayout>
+        <div className="min-h-screen flex items-center justify-center">
+          <div className="text-center">
+            <p className="text-red-400 mb-2 text-lg font-semibold">
+              {error || 'Shift not found'}
+            </p>
+            {error && (
+              <p className="text-gray-400 mb-4 text-sm">Shift ID: {shiftId}</p>
+            )}
+            <button
+              onClick={() =>
+                router.push(
+                  isManager || isSuperAdmin ? '/shifts' : '/dashboard'
+                )
+              }
+              className="px-4 py-2 rounded-lg bg-gradient-to-r from-purple-600 to-blue-600 text-white font-semibold hover:from-purple-500 hover:to-blue-500 transition-all"
+            >
+              {isManager || isSuperAdmin
+                ? 'Back to Shifts'
+                : 'Back to Dashboard'}
+            </button>
+          </div>
         </div>
-      </div>
+      </PremiumLayout>
     );
   }
+
+  if (!shift) {
+    return null; // Still loading or error state
+  }
+
+  // Sort assignments: BARBACK first, then LEAD, then regular BARTENDER
+  const sortedAssignments = [...shift.assignments].sort((a, b) => {
+    // Barbacks first
+    if (a.role === 'BARBACK' && b.role !== 'BARBACK') return -1;
+    if (a.role !== 'BARBACK' && b.role === 'BARBACK') return 1;
+
+    // Then leads
+    if (a.isLead && !b.isLead) return -1;
+    if (!a.isLead && b.isLead) return 1;
+
+    // Then regular bartenders
+    return 0;
+  });
 
   const bartenderCount = shift.assignments.filter(
     (a) => a.role === 'BARTENDER'
@@ -425,546 +751,1115 @@ export default function ShiftDetailPage() {
     barbackCount >= shift.barbacksRequired &&
     leadCount >= shift.leadsRequired;
 
+  function getStaffingViolations() {
+    if (!shift) return [];
+    const violations: string[] = [];
+
+    if (shift.assignments.length === 0) {
+      violations.push('No staff assigned');
+      return violations;
+    }
+
+    if (bartenderCount < shift.bartendersRequired) {
+      violations.push(
+        `Missing ${shift.bartendersRequired - bartenderCount} bartender${shift.bartendersRequired - bartenderCount !== 1 ? 's' : ''}`
+      );
+    }
+    if (barbackCount < shift.barbacksRequired) {
+      violations.push(
+        `Missing ${shift.barbacksRequired - barbackCount} barback${shift.barbacksRequired - barbackCount !== 1 ? 's' : ''}`
+      );
+    }
+    if (leadCount < shift.leadsRequired) {
+      violations.push(
+        `Missing ${shift.leadsRequired - leadCount} lead${shift.leadsRequired - leadCount !== 1 ? 's' : ''}`
+      );
+    }
+
+    return violations;
+  }
+
+  const staffingViolations = getStaffingViolations();
+  const hasViolations = staffingViolations.length > 0;
+
   return (
-    <div className="min-h-screen bg-background">
-      <header className="border-b border-border">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
-          <div className="flex items-center justify-between">
-            <div>
-              <h1 className="text-2xl font-bold">Shift Details</h1>
-              <p className="text-sm text-muted-foreground">
-                {shift.venue.name} -{' '}
-                {new Date(shift.date).toLocaleDateString('default', {
-                  weekday: 'long',
-                  month: 'long',
-                  day: 'numeric',
-                  year: 'numeric',
-                })}
-              </p>
-            </div>
-            <button
-              onClick={() => router.push('/shifts')}
-              className="btn btn-outline"
-            >
-              Back to Shifts
-            </button>
-          </div>
-        </div>
-      </header>
-
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {/* Shift Info */}
-        <div className="card mb-6">
-          <div className="card-header">
-            <h2 className="text-xl font-semibold">Shift Information</h2>
-          </div>
-          <div className="card-content">
-            <dl className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <dt className="text-sm text-muted-foreground">Time</dt>
-                <dd className="text-lg font-medium">
-                  {shift.startTime} - {shift.endTime}
-                </dd>
-              </div>
-              <div>
-                <dt className="text-sm text-muted-foreground">Status</dt>
-                <dd>
-                  {isFullyStaffed ? (
-                    <span className="badge badge-success">Fully Staffed</span>
-                  ) : (
-                    <span className="badge badge-warning">Needs Staff</span>
-                  )}
-                </dd>
-              </div>
-              <div>
-                <dt className="text-sm text-muted-foreground">Bartenders</dt>
-                <dd className="text-lg font-medium">
-                  {bartenderCount} / {shift.bartendersRequired}
-                </dd>
-              </div>
-              <div>
-                <dt className="text-sm text-muted-foreground">Barbacks</dt>
-                <dd className="text-lg font-medium">
-                  {barbackCount} / {shift.barbacksRequired}
-                </dd>
-              </div>
-              <div>
-                <dt className="text-sm text-muted-foreground">Leads</dt>
-                <dd className="text-lg font-medium">
-                  {leadCount} / {shift.leadsRequired}
-                </dd>
-              </div>
-            </dl>
-          </div>
-        </div>
-
-        {/* Error Display */}
-        {error && (
-          <div className="alert alert-error mb-6" role="alert">
-            {error}
-          </div>
-        )}
-
-        {/* Missing Tip Entry Warning */}
-        {isManager &&
-          shift.venue.tipPoolEnabled &&
-          shift.assignments.length > 0 &&
-          !shift.tipsPublished &&
-          (() => {
-            const assignmentsWithoutTips = shift.assignments.filter(
-              (a) => a.tipAmount === null || a.tipAmount === undefined
-            );
-            return assignmentsWithoutTips.length > 0 ? (
-              <div className="alert alert-warning mb-6" role="alert">
-                <div className="flex items-start gap-3">
-                  <span className="text-xl">⚠️</span>
-                  <div className="flex-1">
-                    <p className="font-semibold mb-1">Missing Tip Entries</p>
-                    <p className="text-sm mb-2">
-                      {assignmentsWithoutTips.length} assignment
-                      {assignmentsWithoutTips.length !== 1 ? 's' : ''} still
-                      need tip amounts entered:
-                    </p>
-                    <ul className="text-sm list-disc list-inside mb-3 space-y-1">
-                      {assignmentsWithoutTips.map((assignment) => (
-                        <li key={assignment.id}>
-                          {assignment.user.name} ({assignment.role}
-                          {assignment.isLead && ' - Lead'})
-                        </li>
-                      ))}
-                    </ul>
-                    <button
-                      onClick={handleOpenTipModal}
-                      className="btn btn-sm btn-primary"
-                    >
-                      Enter Tips Now
-                    </button>
-                  </div>
-                </div>
-              </div>
-            ) : null;
-          })()}
-
-        {/* Assignments */}
-        <div className="card mb-6">
-          <div className="card-header">
+    <PremiumLayout>
+      <div className="relative z-10 min-h-screen">
+        <header className="sticky top-0 z-20 bg-gray-900/80 backdrop-blur-xl border-b border-gray-800/50">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-2">
             <div className="flex items-center justify-between">
-              <h2 className="text-xl font-semibold">Staff Assignments</h2>
-              <div className="flex gap-2">
-                {!isManager &&
-                  shift.assignments.some(
-                    (a) => a.user.id === session?.user?.id
-                  ) && (
-                    <button
-                      onClick={handleProposeTradeClick}
-                      className="btn btn-outline"
-                    >
-                      Trade This Shift
-                    </button>
-                  )}
+              <div>
+                <h1 className="text-xl sm:text-2xl font-bold bg-gradient-to-r from-purple-400 via-blue-400 to-cyan-400 bg-clip-text text-transparent">
+                  {shift.eventName || 'Shift Details'}
+                </h1>
+                <p className="text-xs text-gray-400">
+                  {shift.venue.name} •{' '}
+                  {new Date(shift.date).toLocaleDateString('en-US', {
+                    weekday: 'short',
+                    month: 'short',
+                    day: 'numeric',
+                  })}
+                  {' • '}
+                  {formatTime12Hour(shift.startTime)}
+                </p>
+              </div>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() =>
+                    router.push(isManager ? '/shifts' : '/dashboard')
+                  }
+                  className="px-3 py-1.5 rounded-lg border border-gray-700 bg-gray-800/50 text-gray-300 font-medium hover:bg-gray-800 transition-all text-sm"
+                >
+                  Back
+                </button>
+                <UserMenu />
+              </div>
+            </div>
+          </div>
+        </header>
+
+        <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
+          {/* Toast Messages */}
+          {error && (
+            <Toast message={error} type="error" onClose={() => setError('')} />
+          )}
+          {success && (
+            <Toast
+              message={success}
+              type="success"
+              onClose={() => setSuccess('')}
+            />
+          )}
+
+          {/* Breadcrumbs */}
+          {shift && (
+            <Breadcrumb
+              items={[
+                { label: 'Dashboard', href: '/dashboard' },
+                ...(isManager || isSuperAdmin
+                  ? [{ label: 'Shift Scheduler', href: '/shifts' }]
+                  : []),
+              ]}
+              currentLabel={
+                shift.eventName
+                  ? `${shift.eventName} - ${new Date(shift.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}`
+                  : 'Shift Details'
+              }
+            />
+          )}
+
+          {/* Shift Info */}
+          <PremiumCard className="mb-3">
+            <div className="p-4">
+              <div className="flex items-center justify-between mb-3">
+                <h2 className="text-lg font-semibold text-gray-100">
+                  Shift Information
+                </h2>
+                {isManager && (
+                  <button
+                    onClick={() => setShowEditModal(true)}
+                    className="px-3 py-1.5 rounded-lg border border-gray-700 dark:border-gray-600 bg-gray-100 dark:bg-gray-800/50 text-gray-700 dark:text-gray-300 font-medium hover:bg-gray-200 dark:hover:bg-gray-800 transition-all text-sm"
+                  >
+                    Edit
+                  </button>
+                )}
+              </div>
+              <dl className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
+                {shift.eventName && (
+                  <div>
+                    <dt className="text-xs text-gray-400 mb-0.5">Event</dt>
+                    <dd className="text-sm font-medium text-gray-100">
+                      {shift.eventName}
+                    </dd>
+                  </div>
+                )}
+                <div>
+                  <dt className="text-xs text-gray-400 mb-0.5">Venue</dt>
+                  <dd className="text-sm font-medium text-gray-100">
+                    {shift.venue.name}
+                  </dd>
+                </div>
+                <div>
+                  <dt className="text-xs text-gray-400 mb-0.5">Date</dt>
+                  <dd className="text-sm font-medium text-gray-100">
+                    {new Date(shift.date).toLocaleDateString('en-US', {
+                      weekday: 'short',
+                      month: 'short',
+                      day: 'numeric',
+                      year: 'numeric',
+                    })}
+                  </dd>
+                </div>
+                {shift.venue.tipPoolEnabled && (
+                  <div>
+                    <dt className="text-xs text-gray-400 mb-0.5">Tip Pool</dt>
+                    <dd className="text-sm font-medium text-gray-100">
+                      {shift.assignments.length > 0 &&
+                      shift.assignments.some(
+                        (a) => a.tipAmount !== null && Number(a.tipAmount) > 0
+                      ) ? (
+                        `$${Number(shift.assignments[0].tipAmount || 0).toFixed(2)}/person`
+                      ) : (
+                        <span className="text-xs text-gray-400">
+                          Not entered
+                        </span>
+                      )}
+                    </dd>
+                  </div>
+                )}
                 {isManager && (
                   <>
-                    {shift.venue.tipPoolEnabled &&
-                      shift.assignments.length > 0 && (
-                        <>
-                          <button
-                            onClick={handleOpenTipModal}
-                            className="btn btn-outline"
-                          >
-                            Enter Tips
-                          </button>
-                          {shift.assignments.some(
-                            (a) =>
-                              a.tipAmount !== null && a.tipAmount !== undefined
-                          ) &&
-                            !shift.tipsPublished && (
-                              <button
-                                onClick={handlePublishTips}
-                                className="btn btn-primary"
-                                disabled={publishingTips}
-                                title="Publish tips to make them visible to staff"
-                              >
-                                {publishingTips
-                                  ? 'Publishing...'
-                                  : 'Publish Tips'}
-                              </button>
-                            )}
-                          {shift.tipsPublished && (
-                            <span className="badge badge-success">
-                              Tips Published
-                            </span>
-                          )}
-                        </>
-                      )}
+                    <div>
+                      <dt className="text-xs text-gray-400 mb-0.5">Status</dt>
+                      <dd>
+                        {isFullyStaffed ? (
+                          <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold bg-green-500/10 text-green-400 border border-green-500/20">
+                            ✓ Staffed
+                          </span>
+                        ) : (
+                          <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold bg-red-500/20 text-red-400 border border-red-500/40">
+                            ⚠ {staffingViolations[0] || 'Action Needed'}
+                          </span>
+                        )}
+                      </dd>
+                    </div>
+                    <div>
+                      <dt className="text-xs text-gray-400 mb-0.5">
+                        Bartenders
+                      </dt>
+                      <dd
+                        className={`text-sm font-medium ${bartenderCount < shift.bartendersRequired ? 'text-red-400' : 'text-gray-100'}`}
+                      >
+                        {bartenderCount}/{shift.bartendersRequired}
+                      </dd>
+                    </div>
+                    <div>
+                      <dt className="text-xs text-gray-400 mb-0.5">Barbacks</dt>
+                      <dd
+                        className={`text-sm font-medium ${barbackCount < shift.barbacksRequired ? 'text-red-400' : 'text-gray-100'}`}
+                      >
+                        {barbackCount}/{shift.barbacksRequired}
+                      </dd>
+                    </div>
+                    <div>
+                      <dt className="text-xs text-gray-400 mb-0.5">Leads</dt>
+                      <dd
+                        className={`text-sm font-medium ${leadCount < shift.leadsRequired ? 'text-red-400' : 'text-gray-100'}`}
+                      >
+                        {leadCount}/{shift.leadsRequired}
+                      </dd>
+                    </div>
+                  </>
+                )}
+              </dl>
+            </div>
+          </PremiumCard>
+
+          {/* Error Display */}
+          {error && (
+            <div className="mb-3 p-3 bg-red-500/10 border border-red-500/30 text-red-400 rounded-lg text-xs">
+              {error}
+            </div>
+          )}
+
+          {/* Missing Tip Entry Warning - Compact */}
+          {isManager &&
+            shift.venue.tipPoolEnabled &&
+            shift.assignments.length > 0 &&
+            !shift.assignments.some(
+              (a) =>
+                a.tipAmount !== null &&
+                a.tipAmount !== undefined &&
+                Number(a.tipAmount) > 0
+            ) && (
+              <div className="mb-3 p-2 bg-yellow-500/10 border border-yellow-500/30 text-yellow-400 rounded-lg flex items-center justify-between">
+                <span className="text-xs">⚠️ Tips not entered</span>
+                <button
+                  onClick={handleOpenTipModal}
+                  className="px-3 py-1 rounded bg-gradient-to-r from-purple-600 to-blue-600 text-white text-xs font-semibold hover:from-purple-500 hover:to-blue-500 transition-all"
+                >
+                  Enter Tips
+                </button>
+              </div>
+            )}
+
+          {/* Shift Actions for Staff - Compact */}
+          {!isManager &&
+            shift.assignments.some((a) => a.user.id === session?.user?.id) && (
+              <div className="mb-3 p-2 bg-blue-500/10 border border-blue-500/30 rounded-lg flex items-center justify-between">
+                <span className="text-xs text-blue-400">
+                  {shift.upForTrade ? 'Up for trade' : 'Put shift up for trade'}
+                </span>
+                {!shift.upForTrade && (
+                  <button
+                    onClick={handlePutUpForTrade}
+                    className="px-3 py-1 rounded border border-gray-700 dark:border-gray-600 bg-gray-100 dark:bg-gray-800/50 text-gray-700 dark:text-gray-300 text-xs font-medium hover:bg-gray-200 dark:hover:bg-gray-800 transition-all"
+                  >
+                    Trade
+                  </button>
+                )}
+              </div>
+            )}
+
+          {/* Staff Assignments - Only for Managers */}
+          {isManager && (
+            <PremiumCard className="mb-3">
+              <div className="p-4">
+                <div className="flex items-center justify-between mb-3">
+                  <h2 className="text-lg font-semibold text-foreground dark:text-gray-100">
+                    Staff Assignments
+                  </h2>
+                  <button
+                    onClick={() => setShowAssignModal(true)}
+                    className="px-3 py-1.5 rounded-lg bg-gradient-to-r from-purple-600 to-blue-600 text-white font-semibold hover:from-purple-500 hover:to-blue-500 transition-all text-sm"
+                  >
+                    + Assign
+                  </button>
+                </div>
+                {shift.assignments.length === 0 ? (
+                  <div className="text-center py-4">
+                    <div className="inline-flex items-center gap-2 px-3 py-2 rounded-lg bg-red-500/10 border border-red-500/30 text-red-400 mb-3">
+                      <span className="text-sm">⚠️</span>
+                      <span className="text-xs font-semibold">
+                        No staff assigned
+                      </span>
+                    </div>
                     <button
                       onClick={() => setShowAssignModal(true)}
-                      className="btn btn-primary"
+                      className="px-3 py-1.5 rounded-lg bg-gradient-to-r from-purple-600 to-blue-600 text-white font-semibold hover:from-purple-500 hover:to-blue-500 transition-all text-sm"
                     >
                       Assign Staff
                     </button>
-                  </>
+                  </div>
+                ) : (
+                  <div className="space-y-1 max-h-[300px] overflow-y-auto">
+                    {sortedAssignments.map((assignment) => (
+                      <div
+                        key={assignment.id}
+                        className="flex items-center justify-between py-2 px-2 rounded border border-border dark:border-gray-800 bg-muted/30 dark:bg-gray-800/20"
+                      >
+                        <div className="flex items-center gap-2 flex-1 min-w-0">
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-1.5 flex-wrap">
+                              <div className="font-medium text-sm text-foreground dark:text-gray-100 truncate">
+                                {assignment.user.name}
+                              </div>
+                              <span className="inline-flex items-center px-1.5 py-0.5 rounded text-xs font-semibold bg-blue-500/10 text-blue-700 dark:text-blue-400 border border-blue-500/20">
+                                {assignment.role === 'BARTENDER' ? 'BT' : 'BB'}
+                              </span>
+                              {assignment.isLead && (
+                                <span className="inline-flex items-center px-1.5 py-0.5 rounded text-xs font-semibold bg-yellow-500/10 text-yellow-700 dark:text-yellow-400 border border-yellow-500/20">
+                                  Lead
+                                </span>
+                              )}
+                              {assignment.isOnCall && (
+                                <span className="inline-flex items-center px-1.5 py-0.5 rounded text-xs font-semibold bg-purple-500/10 text-purple-700 dark:text-purple-400 border border-purple-500/20">
+                                  OC
+                                </span>
+                              )}
+                              {shift.venue.tipPoolEnabled &&
+                                assignment.tipAmount && (
+                                  <span className="text-xs text-green-600 dark:text-green-400">
+                                    ${Number(assignment.tipAmount).toFixed(2)}
+                                  </span>
+                                )}
+                            </div>
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-1">
+                          {!assignment.isLead && (
+                            <button
+                              onClick={() => handleToggleOnCall(assignment.id)}
+                              className={`px-1.5 py-0.5 rounded border font-medium text-xs flex-shrink-0 transition-all ${
+                                assignment.isOnCall
+                                  ? 'border-purple-700 dark:border-purple-800 bg-purple-50 dark:bg-purple-800/50 text-purple-700 dark:text-purple-300'
+                                  : 'border-gray-700 dark:border-gray-800 bg-gray-50 dark:bg-gray-800/50 text-gray-700 dark:text-gray-300 hover:border-purple-500'
+                              }`}
+                              title={
+                                assignment.isOnCall
+                                  ? 'Mark as regular'
+                                  : 'Mark as on-call'
+                              }
+                            >
+                              {assignment.isOnCall ? 'OC' : 'OC'}
+                            </button>
+                          )}
+                          <button
+                            onClick={() =>
+                              handleRemoveAssignment(assignment.id)
+                            }
+                            className="px-1.5 py-0.5 rounded border border-red-700 dark:border-red-800 bg-red-50 dark:bg-red-800/50 text-red-700 dark:text-red-300 font-medium text-xs flex-shrink-0"
+                            title="Remove assignment"
+                          >
+                            ×
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
                 )}
               </div>
-            </div>
-          </div>
-          <div className="card-content">
-            {shift.assignments.length === 0 ? (
-              <p className="text-muted-foreground text-center py-8">
-                No staff assigned yet
-              </p>
-            ) : (
-              <div className="space-y-2">
-                {shift.assignments.map((assignment) => (
-                  <div
-                    key={assignment.id}
-                    className="flex items-center justify-between p-3 rounded-lg border border-border hover:bg-accent"
-                  >
-                    <div className="flex-1">
-                      <div className="font-medium">{assignment.user.name}</div>
-                      <div className="text-sm text-muted-foreground">
-                        {assignment.user.email}
-                      </div>
-                      {shift.venue.tipPoolEnabled && assignment.tipAmount && (
-                        <div className="text-sm text-success mt-1">
-                          Tip: ${Number(assignment.tipAmount).toFixed(2)}
-                        </div>
-                      )}
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <span className="badge badge-info">
-                        {assignment.role}
-                      </span>
-                      {assignment.isLead && (
-                        <span className="badge badge-success">Lead</span>
-                      )}
-                      {isManager && (
-                        <button
-                          onClick={() => handleRemoveAssignment(assignment.id)}
-                          className="btn btn-outline text-destructive hover:bg-destructive hover:text-destructive-foreground text-sm"
-                        >
-                          Remove
-                        </button>
-                      )}
-                    </div>
+            </PremiumCard>
+          )}
+
+          {/* Assign Modal */}
+          {showAssignModal && (
+            <div
+              className="fixed inset-0 bg-black/50 flex items-center justify-center z-50"
+              onClick={() => setShowAssignModal(false)}
+            >
+              <div
+                className="bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-700 rounded-lg p-6 max-w-md w-full mx-4 shadow-xl"
+                onClick={(e) => e.stopPropagation()}
+              >
+                <div className="flex items-center justify-between mb-6">
+                  <div>
+                    <h3 className="text-xl font-semibold text-gray-900 dark:text-gray-100">
+                      Assign Staff
+                    </h3>
+                    <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
+                      Add a staff member to this shift
+                    </p>
                   </div>
-                ))}
-              </div>
-            )}
-          </div>
-        </div>
-
-        {/* Assign Modal */}
-        {showAssignModal && (
-          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-            <div className="bg-background border border-border rounded-lg p-6 max-w-md w-full mx-4">
-              <h3 className="text-xl font-semibold mb-4">Assign Staff</h3>
-
-              <div className="space-y-4">
-                <div>
-                  <label htmlFor="user" className="form-label">
-                    Select Staff Member
-                  </label>
-                  <select
-                    id="user"
-                    value={selectedUserId}
-                    onChange={(e) => setSelectedUserId(e.target.value)}
-                    className="input w-full"
-                  >
-                    <option value="">-- Select User --</option>
-                    {availableUsers.map((user) => (
-                      <option key={user.id} value={user.id}>
-                        {user.name} - {user.role}
-                        {user.isLead ? ' (Lead)' : ''}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-
-                <div>
-                  <label htmlFor="role" className="form-label">
-                    Role for this Shift
-                  </label>
-                  <select
-                    id="role"
-                    value={selectedRole}
-                    onChange={(e) =>
-                      setSelectedRole(e.target.value as 'BARTENDER' | 'BARBACK')
-                    }
-                    className="input w-full"
-                  >
-                    <option value="BARTENDER">Bartender</option>
-                    <option value="BARBACK">Barback</option>
-                  </select>
-                </div>
-
-                <div className="flex items-center gap-2">
-                  <input
-                    type="checkbox"
-                    id="isLead"
-                    checked={selectedIsLead}
-                    onChange={(e) => setSelectedIsLead(e.target.checked)}
-                    className="checkbox"
-                  />
-                  <label htmlFor="isLead" className="cursor-pointer">
-                    Assign as lead for this shift
-                  </label>
-                </div>
-              </div>
-
-              {/* Validation Errors */}
-              {validationErrors.length > 0 && (
-                <div className="bg-yellow-500/10 border border-yellow-500 rounded-lg p-4 mt-4">
-                  <h4 className="font-semibold text-yellow-600 dark:text-yellow-400 mb-2">
-                    Validation Issues
-                  </h4>
-                  <ul className="space-y-1 text-sm">
-                    {validationErrors.map((err, idx) => (
-                      <li
-                        key={idx}
-                        className="text-yellow-600 dark:text-yellow-400"
-                      >
-                        • {err.message}
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              )}
-
-              <div className="flex justify-end gap-4 mt-6">
-                <button
-                  onClick={() => {
-                    setShowAssignModal(false);
-                    setError('');
-                    setValidationErrors([]);
-                  }}
-                  className="btn btn-outline"
-                  disabled={assigning}
-                >
-                  Cancel
-                </button>
-                {validationErrors.length > 0 ? (
                   <button
-                    onClick={() => setShowOverrideModal(true)}
+                    onClick={() => setShowAssignModal(false)}
+                    className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors"
+                    disabled={assigning}
+                  >
+                    <svg
+                      className="w-6 h-6"
+                      fill="none"
+                      viewBox="0 0 24 24"
+                      stroke="currentColor"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M6 18L18 6M6 6l12 12"
+                      />
+                    </svg>
+                  </button>
+                </div>
+
+                <div className="space-y-4">
+                  <div>
+                    <label
+                      htmlFor="user"
+                      className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2"
+                    >
+                      Select Staff Member{' '}
+                      <span className="text-red-500">*</span>
+                    </label>
+                    <select
+                      id="user"
+                      value={selectedUserId}
+                      onChange={(e) => setSelectedUserId(e.target.value)}
+                      className="w-full px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/50 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-purple-500/50 focus:border-transparent"
+                    >
+                      <option value="">-- Select User --</option>
+                      {availableUsers.map((user) => (
+                        <option key={user.id} value={user.id}>
+                          {user.name} - {user.role}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  {selectedUserId && (
+                    <div>
+                      <label
+                        htmlFor="role"
+                        className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2"
+                      >
+                        Role for this Shift
+                      </label>
+                      <div className="w-full px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-700 bg-gray-100 dark:bg-gray-800/70 text-gray-700 dark:text-gray-300 cursor-not-allowed">
+                        {selectedRole === 'BARTENDER' ? 'Bartender' : 'Barback'}
+                      </div>
+                      <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                        Role is set based on staff member&apos;s default role
+                      </p>
+                    </div>
+                  )}
+
+                  {selectedUserId && selectedRole === 'BARTENDER' && (
+                    <div className="flex items-center gap-3 p-3 rounded-lg border border-gray-300 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/30">
+                      <input
+                        type="checkbox"
+                        id="isLead"
+                        checked={selectedIsLead}
+                        onChange={(e) => setSelectedIsLead(e.target.checked)}
+                        className="w-4 h-4 rounded border-gray-300 dark:border-gray-600 text-purple-600 focus:ring-purple-500"
+                      />
+                      <label
+                        htmlFor="isLead"
+                        className="text-sm font-medium text-gray-700 dark:text-gray-300 cursor-pointer"
+                      >
+                        Assign as lead for this shift
+                      </label>
+                    </div>
+                  )}
+                </div>
+
+                {/* Validation Errors */}
+                {validationErrors.length > 0 && (
+                  <div className="bg-yellow-500/10 border border-yellow-500/30 rounded-lg p-4 mt-4">
+                    <h4 className="font-semibold text-yellow-600 dark:text-yellow-400 mb-2 text-sm">
+                      Validation Issues
+                    </h4>
+                    <ul className="space-y-1 text-sm">
+                      {validationErrors.map((err, idx) => (
+                        <li
+                          key={idx}
+                          className="text-yellow-600 dark:text-yellow-400"
+                        >
+                          • {err.message}
+                          {err.suggestion && (
+                            <span className="block text-xs text-yellow-500/80 dark:text-yellow-400/80 ml-4 mt-1">
+                              → {err.suggestion}
+                            </span>
+                          )}
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+
+                {error && (
+                  <div className="mt-4 p-3 rounded-lg bg-red-500/10 border border-red-500/30 text-red-400 text-sm">
+                    {error}
+                  </div>
+                )}
+
+                <div className="flex justify-end gap-4 mt-6 pt-4 border-t border-gray-200 dark:border-gray-700">
+                  <button
+                    onClick={() => {
+                      setShowAssignModal(false);
+                      setSelectedUserId('');
+                      setSelectedRole('BARTENDER');
+                      setSelectedIsLead(false);
+                      setValidationErrors([]);
+                      setError('');
+                    }}
+                    className="px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/50 text-gray-700 dark:text-gray-300 font-medium hover:bg-gray-100 dark:hover:bg-gray-800 transition-all"
+                    disabled={assigning}
+                  >
+                    Cancel
+                  </button>
+                  {validationErrors.length > 0 && !isSuperAdmin ? (
+                    <button
+                      onClick={() => setShowOverrideModal(true)}
+                      className="px-4 py-2 rounded-lg border border-yellow-600 dark:border-yellow-500 bg-yellow-50 dark:bg-yellow-900/20 text-yellow-700 dark:text-yellow-400 font-semibold hover:bg-yellow-100 dark:hover:bg-yellow-900/30 transition-all disabled:opacity-50"
+                      disabled={assigning}
+                    >
+                      Request Override
+                    </button>
+                  ) : (
+                    <button
+                      onClick={handleAssignUser}
+                      className="px-4 py-2 rounded-lg bg-gradient-to-r from-purple-600 via-blue-600 to-cyan-600 text-white font-semibold hover:shadow-lg hover:shadow-purple-500/30 transition-all disabled:opacity-50"
+                      disabled={!selectedUserId || assigning}
+                    >
+                      {assigning
+                        ? 'Assigning...'
+                        : isSuperAdmin && validationErrors.length > 0
+                          ? 'Assign (Bypass Rules)'
+                          : 'Assign Staff'}
+                    </button>
+                  )}
+                  {validationErrors.length > 0 && isSuperAdmin && (
+                    <div className="mt-2 text-xs text-yellow-600 dark:text-yellow-400 bg-yellow-500/10 border border-yellow-500/20 rounded p-2">
+                      <p className="font-semibold mb-1">
+                        ⚠️ Validation Issues Detected (Bypassed as Super Admin):
+                      </p>
+                      <ul className="list-disc list-inside space-y-1">
+                        {validationErrors.map((err, idx) => (
+                          <li key={idx}>{err.message}</li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Override Request Modal */}
+          {showOverrideModal && (
+            <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+              <div className="bg-background border border-border rounded-lg p-6 max-w-md w-full mx-4">
+                <h3 className="text-xl font-semibold mb-4">Request Override</h3>
+
+                <div className="mb-4">
+                  <p className="text-sm text-muted-foreground mb-4">
+                    This assignment violates scheduling rules. Please provide a
+                    reason for the override. The staff member will need to
+                    approve this request.
+                  </p>
+
+                  <label htmlFor="overrideReason" className="form-label">
+                    Reason for Override{' '}
+                    <span className="text-destructive">*</span>
+                  </label>
+                  <textarea
+                    id="overrideReason"
+                    value={overrideReason}
+                    onChange={(e) => setOverrideReason(e.target.value)}
+                    rows={4}
+                    className="input w-full"
+                    placeholder="Explain why this override is necessary..."
+                  />
+                </div>
+
+                <div className="flex justify-end gap-4">
+                  <button
+                    onClick={() => {
+                      setShowOverrideModal(false);
+                      setOverrideReason('');
+                    }}
+                    className="btn btn-outline"
+                    disabled={assigning}
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    onClick={handleRequestOverride}
                     className="btn btn-warning"
                     disabled={assigning}
                   >
-                    Request Override
+                    {assigning ? 'Requesting...' : 'Request Override'}
                   </button>
-                ) : (
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Edit Shift Modal */}
+          {showEditModal && shift && (
+            <div
+              className="fixed inset-0 bg-black/50 flex items-center justify-center z-50"
+              onClick={() => {
+                setShowEditModal(false);
+                setError('');
+                if (shift) {
+                  const shiftDate = new Date(shift.date);
+                  const tipAmount =
+                    shift.assignments &&
+                    shift.assignments.length > 0 &&
+                    shift.assignments[0].tipAmount
+                      ? Number(shift.assignments[0].tipAmount).toFixed(2)
+                      : '';
+                  setEditFormData({
+                    venueId: shift.venue.id,
+                    date: shiftDate.toISOString().split('T')[0],
+                    startTime: shift.startTime,
+                    eventName: shift.eventName || '',
+                    bartendersRequired: String(shift.bartendersRequired || 0),
+                    barbacksRequired: String(shift.barbacksRequired || 0),
+                    leadsRequired: String(shift.leadsRequired || 0),
+                    tipAmount: tipAmount,
+                  });
+                }
+              }}
+            >
+              <div
+                className="bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-700 rounded-lg p-6 max-w-2xl w-full mx-4 max-h-[90vh] overflow-y-auto shadow-xl"
+                onClick={(e) => e.stopPropagation()}
+              >
+                <div className="flex items-center justify-between mb-6">
+                  <div>
+                    <h3 className="text-xl font-semibold text-gray-900 dark:text-gray-100">
+                      Edit Shift
+                    </h3>
+                    {shift.eventName && (
+                      <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
+                        {shift.eventName}
+                      </p>
+                    )}
+                  </div>
                   <button
-                    onClick={handleAssignUser}
-                    className="btn btn-primary"
-                    disabled={!selectedUserId || assigning}
+                    onClick={() => {
+                      setShowEditModal(false);
+                      setError('');
+                      if (shift) {
+                        const shiftDate = new Date(shift.date);
+                        const tipAmount =
+                          shift.assignments &&
+                          shift.assignments.length > 0 &&
+                          shift.assignments[0].tipAmount
+                            ? Number(shift.assignments[0].tipAmount).toFixed(2)
+                            : '';
+                        setEditFormData({
+                          venueId: shift.venue.id,
+                          date: shiftDate.toISOString().split('T')[0],
+                          startTime: shift.startTime,
+                          eventName: shift.eventName || '',
+                          bartendersRequired: String(
+                            shift.bartendersRequired || 0
+                          ),
+                          barbacksRequired: String(shift.barbacksRequired || 0),
+                          leadsRequired: String(shift.leadsRequired || 0),
+                          tipAmount: tipAmount,
+                        });
+                      }
+                    }}
+                    className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors"
+                    disabled={editingShift}
                   >
-                    {assigning ? 'Assigning...' : 'Assign'}
-                  </button>
-                )}
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* Override Request Modal */}
-        {showOverrideModal && (
-          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-            <div className="bg-background border border-border rounded-lg p-6 max-w-md w-full mx-4">
-              <h3 className="text-xl font-semibold mb-4">Request Override</h3>
-
-              <div className="mb-4">
-                <p className="text-sm text-muted-foreground mb-4">
-                  This assignment violates scheduling rules. Please provide a
-                  reason for the override. The staff member will need to approve
-                  this request.
-                </p>
-
-                <label htmlFor="overrideReason" className="form-label">
-                  Reason for Override{' '}
-                  <span className="text-destructive">*</span>
-                </label>
-                <textarea
-                  id="overrideReason"
-                  value={overrideReason}
-                  onChange={(e) => setOverrideReason(e.target.value)}
-                  rows={4}
-                  className="input w-full"
-                  placeholder="Explain why this override is necessary..."
-                />
-              </div>
-
-              <div className="flex justify-end gap-4">
-                <button
-                  onClick={() => {
-                    setShowOverrideModal(false);
-                    setOverrideReason('');
-                  }}
-                  className="btn btn-outline"
-                  disabled={assigning}
-                >
-                  Cancel
-                </button>
-                <button
-                  onClick={handleRequestOverride}
-                  className="btn btn-warning"
-                  disabled={assigning}
-                >
-                  {assigning ? 'Requesting...' : 'Request Override'}
-                </button>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* Trade Modal */}
-        {showTradeModal && (
-          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-            <div className="bg-background border border-border rounded-lg p-6 max-w-md w-full mx-4">
-              <h3 className="text-xl font-semibold mb-4">Trade This Shift</h3>
-
-              <div className="mb-4">
-                <p className="text-sm text-muted-foreground mb-4">
-                  Select a staff member to propose this trade to. They must
-                  accept, and then a manager must approve the trade.
-                </p>
-
-                <label htmlFor="tradeReceiver" className="form-label">
-                  Trade With <span className="text-destructive">*</span>
-                </label>
-                <select
-                  id="tradeReceiver"
-                  value={selectedTradeReceiver}
-                  onChange={(e) => setSelectedTradeReceiver(e.target.value)}
-                  className="input w-full"
-                >
-                  <option value="">-- Select Staff Member --</option>
-                  {availableUsers
-                    .filter((u) => u.id !== session?.user?.id)
-                    .map((user) => (
-                      <option key={user.id} value={user.id}>
-                        {user.name} - {user.role}
-                        {user.isLead ? ' (Lead)' : ''}
-                      </option>
-                    ))}
-                </select>
-
-                <label htmlFor="tradeReason" className="form-label mt-4">
-                  Reason (Optional)
-                </label>
-                <textarea
-                  id="tradeReason"
-                  value={tradeReason}
-                  onChange={(e) => setTradeReason(e.target.value)}
-                  rows={3}
-                  className="input w-full"
-                  placeholder="Why do you want to trade this shift?"
-                />
-              </div>
-
-              <div className="flex justify-end gap-4">
-                <button
-                  onClick={() => {
-                    setShowTradeModal(false);
-                    setSelectedTradeReceiver('');
-                    setTradeReason('');
-                    setError('');
-                  }}
-                  className="btn btn-outline"
-                  disabled={trading}
-                >
-                  Cancel
-                </button>
-                <button
-                  onClick={handleProposeTrade}
-                  className="btn btn-primary"
-                  disabled={!selectedTradeReceiver || trading}
-                >
-                  {trading ? 'Proposing...' : 'Propose Trade'}
-                </button>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* Tip Entry Modal */}
-        {showTipModal && (
-          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-            <div className="bg-background border border-border rounded-lg p-6 max-w-2xl w-full mx-4 max-h-[80vh] overflow-y-auto">
-              <h3 className="text-xl font-semibold mb-4">Enter Tips</h3>
-
-              <div className="mb-4">
-                <p className="text-sm text-muted-foreground mb-4">
-                  Enter tip amounts for each staff member who worked this shift.
-                </p>
-
-                <div className="space-y-3">
-                  {shift?.assignments.map((assignment) => (
-                    <div
-                      key={assignment.id}
-                      className="flex items-center gap-3 p-3 rounded-lg border border-border bg-card"
+                    <svg
+                      className="w-6 h-6"
+                      fill="none"
+                      viewBox="0 0 24 24"
+                      stroke="currentColor"
                     >
-                      <div className="flex-1">
-                        <p className="font-medium">{assignment.user.name}</p>
-                        <p className="text-sm text-muted-foreground">
-                          {assignment.role}
-                          {assignment.isLead && ' (Lead)'}
-                        </p>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <span className="text-muted-foreground">$</span>
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M6 18L18 6M6 6l12 12"
+                      />
+                    </svg>
+                  </button>
+                </div>
+
+                <div className="space-y-5">
+                  {/* Shift Details Section */}
+                  <div className="space-y-3">
+                    <h4 className="text-sm font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide">
+                      Shift Details
+                    </h4>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                      <div className="md:col-span-2">
+                        <label
+                          htmlFor="editEventName"
+                          className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5"
+                        >
+                          Event/Concert Name{' '}
+                          <span className="text-red-500">*</span>
+                        </label>
                         <input
-                          type="number"
-                          min="0"
-                          step="0.01"
-                          value={tipAmounts[assignment.id] || ''}
+                          type="text"
+                          id="editEventName"
+                          value={editFormData.eventName}
                           onChange={(e) =>
-                            setTipAmounts({
-                              ...tipAmounts,
-                              [assignment.id]: e.target.value,
+                            setEditFormData({
+                              ...editFormData,
+                              eventName: e.target.value,
                             })
                           }
-                          className="input w-32"
-                          placeholder="0.00"
+                          className="w-full px-3 py-2 rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-purple-500/50 focus:border-transparent transition-all"
+                          placeholder="Enter event or concert name"
+                          required
+                          disabled={editingShift}
+                        />
+                      </div>
+                      {isManager && (
+                        <div>
+                          <label
+                            htmlFor="editVenue"
+                            className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5"
+                          >
+                            Venue <span className="text-red-500">*</span>
+                          </label>
+                          <select
+                            id="editVenue"
+                            value={editFormData.venueId}
+                            onChange={(e) =>
+                              setEditFormData({
+                                ...editFormData,
+                                venueId: e.target.value,
+                              })
+                            }
+                            className="w-full px-3 py-2 rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-purple-500/50 focus:border-transparent transition-all"
+                            required
+                            disabled={editingShift}
+                          >
+                            {availableVenues.length === 0 ? (
+                              <option value="">No venues available</option>
+                            ) : (
+                              availableVenues.map((venue) => (
+                                <option key={venue.id} value={venue.id}>
+                                  {venue.name}
+                                </option>
+                              ))
+                            )}
+                          </select>
+                        </div>
+                      )}
+
+                      <div>
+                        <label
+                          htmlFor="editDate"
+                          className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5"
+                        >
+                          Date <span className="text-red-500">*</span>
+                        </label>
+                        <input
+                          type="date"
+                          id="editDate"
+                          value={editFormData.date}
+                          onChange={(e) =>
+                            setEditFormData({
+                              ...editFormData,
+                              date: e.target.value,
+                            })
+                          }
+                          className="w-full px-3 py-2 rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-purple-500/50 focus:border-transparent transition-all"
+                          required
+                          disabled={editingShift}
+                        />
+                      </div>
+
+                      <div>
+                        <label
+                          htmlFor="editStartTime"
+                          className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5"
+                        >
+                          Start Time <span className="text-red-500">*</span>
+                        </label>
+                        <input
+                          type="time"
+                          id="editStartTime"
+                          value={editFormData.startTime}
+                          onChange={(e) =>
+                            setEditFormData({
+                              ...editFormData,
+                              startTime: e.target.value,
+                            })
+                          }
+                          className="w-full px-3 py-2 rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-purple-500/50 focus:border-transparent transition-all"
+                          required
+                          disabled={editingShift}
                         />
                       </div>
                     </div>
-                  ))}
+                  </div>
+
+                  {/* Staffing Requirements Section */}
+                  <div className="space-y-4 pt-4 border-t border-gray-200 dark:border-gray-700">
+                    <h4 className="text-sm font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-3">
+                      Staffing Requirements
+                    </h4>
+                    <div className="grid grid-cols-3 gap-4">
+                      <div>
+                        <label
+                          htmlFor="editBartendersRequired"
+                          className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5"
+                        >
+                          Bartenders
+                        </label>
+                        <input
+                          type="number"
+                          id="editBartendersRequired"
+                          min="0"
+                          step="1"
+                          value={editFormData.bartendersRequired}
+                          onChange={(e) => {
+                            const value = e.target.value;
+                            // Allow empty string or valid number
+                            if (
+                              value === '' ||
+                              (!isNaN(Number(value)) && Number(value) >= 0)
+                            ) {
+                              setEditFormData({
+                                ...editFormData,
+                                bartendersRequired:
+                                  value === '' ? '' : String(Number(value)),
+                              });
+                            }
+                          }}
+                          className="w-full px-3 py-2 rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-purple-500/50 focus:border-transparent transition-all [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                          placeholder="0"
+                        />
+                      </div>
+
+                      <div>
+                        <label
+                          htmlFor="editBarbacksRequired"
+                          className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5"
+                        >
+                          Barbacks
+                        </label>
+                        <input
+                          type="number"
+                          id="editBarbacksRequired"
+                          min="0"
+                          step="1"
+                          value={editFormData.barbacksRequired}
+                          onChange={(e) => {
+                            const value = e.target.value;
+                            // Allow empty string or valid number
+                            if (
+                              value === '' ||
+                              (!isNaN(Number(value)) && Number(value) >= 0)
+                            ) {
+                              setEditFormData({
+                                ...editFormData,
+                                barbacksRequired:
+                                  value === '' ? '' : String(Number(value)),
+                              });
+                            }
+                          }}
+                          className="w-full px-3 py-2 rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-purple-500/50 focus:border-transparent transition-all [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                          placeholder="0"
+                        />
+                      </div>
+
+                      <div>
+                        <label
+                          htmlFor="editLeadsRequired"
+                          className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5"
+                        >
+                          Leads
+                        </label>
+                        <input
+                          type="number"
+                          id="editLeadsRequired"
+                          min="0"
+                          step="1"
+                          value={editFormData.leadsRequired}
+                          onChange={(e) => {
+                            const value = e.target.value;
+                            // Allow empty string or valid number
+                            if (
+                              value === '' ||
+                              (!isNaN(Number(value)) && Number(value) >= 0)
+                            ) {
+                              setEditFormData({
+                                ...editFormData,
+                                leadsRequired:
+                                  value === '' ? '' : String(Number(value)),
+                              });
+                            }
+                          }}
+                          className="w-full px-3 py-2 rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-purple-500/50 focus:border-transparent transition-all [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                          placeholder="0"
+                        />
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Tip Pool Section */}
+                  {shift.venue.tipPoolEnabled &&
+                    shift.assignments.length > 0 && (
+                      <div className="space-y-3 pt-4 border-t border-gray-200 dark:border-gray-700">
+                        <h4 className="text-sm font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide">
+                          Tip Pool
+                        </h4>
+                        <div>
+                          <label
+                            htmlFor="editTipAmount"
+                            className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5"
+                          >
+                            Per Person Amount
+                          </label>
+                          <div className="relative">
+                            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                              <span className="text-gray-500 dark:text-gray-400 text-sm">
+                                $
+                              </span>
+                            </div>
+                            <input
+                              type="number"
+                              id="editTipAmount"
+                              min="0"
+                              step="0.01"
+                              value={editFormData.tipAmount}
+                              onChange={(e) =>
+                                setEditFormData({
+                                  ...editFormData,
+                                  tipAmount: e.target.value,
+                                })
+                              }
+                              className="w-full pl-7 pr-3 py-2 rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-purple-500/50 focus:border-transparent transition-all [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                              placeholder="0.00"
+                              disabled={editingShift}
+                            />
+                          </div>
+                        </div>
+                      </div>
+                    )}
                 </div>
 
-                <div className="mt-4 p-3 rounded-lg bg-accent">
-                  <div className="flex justify-between items-center">
-                    <span className="font-semibold">Total:</span>
-                    <span className="text-xl font-bold">
-                      $
-                      {Object.values(tipAmounts)
-                        .reduce((sum, val) => sum + (parseFloat(val) || 0), 0)
-                        .toFixed(2)}
-                    </span>
+                {error && (
+                  <div className="mt-4 p-3 rounded-lg bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 text-red-700 dark:text-red-400 text-sm">
+                    {error}
+                  </div>
+                )}
+
+                <div className="flex items-center justify-between pt-6 mt-6 border-t border-gray-200 dark:border-gray-700">
+                  <button
+                    onClick={handleDeleteShift}
+                    className="px-4 py-2 rounded-lg border border-red-300 dark:border-red-700 bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 font-medium hover:bg-red-100 dark:hover:bg-red-900/30 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                    disabled={editingShift}
+                  >
+                    Delete Shift
+                  </button>
+                  <div className="flex gap-3">
+                    <button
+                      onClick={() => {
+                        setShowEditModal(false);
+                        setError('');
+                        if (shift) {
+                          const shiftDate = new Date(shift.date);
+                          const tipAmount =
+                            shift.assignments &&
+                            shift.assignments.length > 0 &&
+                            shift.assignments[0].tipAmount
+                              ? Number(shift.assignments[0].tipAmount).toFixed(
+                                  2
+                                )
+                              : '';
+                          setEditFormData({
+                            venueId: shift.venue.id,
+                            date: shiftDate.toISOString().split('T')[0],
+                            startTime: shift.startTime,
+                            eventName: shift.eventName || '',
+                            bartendersRequired: String(
+                              shift.bartendersRequired || 0
+                            ),
+                            barbacksRequired: String(
+                              shift.barbacksRequired || 0
+                            ),
+                            leadsRequired: String(shift.leadsRequired || 0),
+                            tipAmount: tipAmount,
+                          });
+                        }
+                      }}
+                      className="px-5 py-2.5 rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 font-medium hover:bg-gray-50 dark:hover:bg-gray-700 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                      disabled={editingShift}
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      onClick={handleUpdateShift}
+                      className="px-5 py-2.5 rounded-lg bg-gradient-to-r from-purple-600 via-blue-600 to-cyan-600 text-white font-semibold hover:shadow-lg hover:shadow-purple-500/30 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                      disabled={
+                        editingShift ||
+                        !editFormData.date ||
+                        !editFormData.startTime ||
+                        !editFormData.eventName.trim() ||
+                        (isManager && !editFormData.venueId)
+                      }
+                    >
+                      {editingShift ? 'Updating...' : 'Update Shift'}
+                    </button>
                   </div>
                 </div>
               </div>
+            </div>
+          )}
 
-              <div className="flex justify-end gap-4">
-                <button
-                  onClick={() => {
-                    setShowTipModal(false);
-                    setError('');
-                  }}
-                  className="btn btn-outline"
-                  disabled={savingTips}
-                >
-                  Cancel
-                </button>
-                <button
-                  onClick={handleSaveTips}
-                  className="btn btn-primary"
-                  disabled={savingTips}
-                >
-                  {savingTips ? 'Saving...' : 'Save Tips'}
-                </button>
+          {/* Tip Entry Modal */}
+          {showTipModal && shift && (
+            <div
+              className="fixed inset-0 bg-black/50 flex items-center justify-center z-50"
+              onClick={() => {
+                setShowTipModal(false);
+                setError('');
+                setTotalTipPool('');
+              }}
+            >
+              <div
+                className="bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-700 rounded-lg p-6 max-w-md w-full mx-4 shadow-xl"
+                onClick={(e) => e.stopPropagation()}
+              >
+                <div className="flex items-center justify-between mb-6">
+                  <div>
+                    <h3 className="text-xl font-semibold text-gray-900 dark:text-gray-100">
+                      Enter Tip Pool
+                    </h3>
+                    <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
+                      Enter the tip amount per person
+                    </p>
+                  </div>
+                  <button
+                    onClick={() => {
+                      setShowTipModal(false);
+                      setError('');
+                      setTotalTipPool('');
+                    }}
+                    className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors"
+                    disabled={savingTips}
+                  >
+                    <svg
+                      className="w-6 h-6"
+                      fill="none"
+                      viewBox="0 0 24 24"
+                      stroke="currentColor"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M6 18L18 6M6 6l12 12"
+                      />
+                    </svg>
+                  </button>
+                </div>
+
+                <div className="mb-6">
+                  <label
+                    htmlFor="totalTipPool"
+                    className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2"
+                  >
+                    Per Person Amount <span className="text-red-500">*</span>
+                  </label>
+                  <div className="flex items-center gap-2">
+                    <span className="text-gray-600 dark:text-gray-400 text-lg">
+                      $
+                    </span>
+                    <input
+                      type="number"
+                      id="totalTipPool"
+                      min="0"
+                      step="0.01"
+                      value={totalTipPool}
+                      onChange={(e) => setTotalTipPool(e.target.value)}
+                      className="w-full px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/50 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-purple-500/50 focus:border-transparent text-lg [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                      placeholder="0.00"
+                      required
+                      autoFocus
+                    />
+                  </div>
+                </div>
+
+                {error && (
+                  <div className="mb-4 p-3 rounded-lg bg-red-500/10 border border-red-500/30 text-red-400 text-sm">
+                    {error}
+                  </div>
+                )}
+
+                <div className="flex justify-end gap-4 pt-4 border-t border-gray-200 dark:border-gray-700">
+                  <button
+                    onClick={() => {
+                      setShowTipModal(false);
+                      setError('');
+                      setTotalTipPool('');
+                    }}
+                    className="px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/50 text-gray-700 dark:text-gray-300 font-medium hover:bg-gray-100 dark:hover:bg-gray-800 transition-all"
+                    disabled={savingTips}
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    onClick={handleSaveTips}
+                    className="px-4 py-2 rounded-lg bg-gradient-to-r from-purple-600 via-blue-600 to-cyan-600 text-white font-semibold hover:shadow-lg hover:shadow-purple-500/30 transition-all disabled:opacity-50"
+                    disabled={
+                      savingTips ||
+                      !totalTipPool ||
+                      parseFloat(totalTipPool) <= 0
+                    }
+                  >
+                    {savingTips ? 'Saving...' : 'Save'}
+                  </button>
+                </div>
               </div>
             </div>
-          </div>
-        )}
-      </main>
-    </div>
+          )}
+        </main>
+      </div>
+    </PremiumLayout>
   );
 }

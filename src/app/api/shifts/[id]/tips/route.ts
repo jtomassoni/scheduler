@@ -5,14 +5,9 @@ import { authOptions, isManager } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 import { NotificationService } from '@/lib/notification-service';
 
-// Schema for bulk tip entry
-const bulkTipSchema = z.object({
-  tips: z.array(
-    z.object({
-      assignmentId: z.string(),
-      amount: z.number().min(0).max(99999.99),
-    })
-  ),
+// Schema for tip pool entry
+const tipPoolSchema = z.object({
+  perPersonAmount: z.number().min(0).max(99999.99),
 });
 
 /**
@@ -21,26 +16,30 @@ const bulkTipSchema = z.object({
  */
 export async function POST(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> | { id: string } }
 ) {
   try {
     const session = await getServerSession(authOptions);
+
+    // Handle params which might be a Promise in Next.js App Router
+    const resolvedParams = params instanceof Promise ? await params : params;
+    const shiftId = resolvedParams.id;
 
     if (!session?.user?.id) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    // Only managers can enter tips
-    if (!isManager(session.user.role)) {
+    // Only managers and super admins can enter tips
+    if (!isManager(session.user.role) && session.user.role !== 'SUPER_ADMIN') {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
 
     const body = await request.json();
-    const validatedData = bulkTipSchema.parse(body);
+    const validatedData = tipPoolSchema.parse(body);
 
     // Verify shift exists
     const shift = await prisma.shift.findUnique({
-      where: { id: params.id },
+      where: { id: shiftId },
       include: {
         venue: {
           select: {
@@ -66,27 +65,24 @@ export async function POST(
       );
     }
 
-    // Verify all assignment IDs belong to this shift
-    const validAssignmentIds = new Set(shift.assignments.map((a) => a.id));
-    const invalidIds = validatedData.tips.filter(
-      (tip) => !validAssignmentIds.has(tip.assignmentId)
-    );
-
-    if (invalidIds.length > 0) {
+    if (shift.assignments.length === 0) {
       return NextResponse.json(
-        { error: 'Invalid assignment IDs provided' },
+        { error: 'No staff assigned to this shift' },
         { status: 400 }
       );
     }
 
-    // Update all tips in a transaction
-    const updatePromises = validatedData.tips.map((tip) => {
+    // Apply the same per-person amount to all staff
+    const perPersonAmount = validatedData.perPersonAmount;
+
+    // Update all tips in a transaction - apply equally to all
+    const updatePromises = shift.assignments.map((assignment) => {
       return prisma.shiftAssignment.update({
-        where: { id: tip.assignmentId },
+        where: { id: assignment.id },
         data: {
-          tipAmount: tip.amount,
+          tipAmount: perPersonAmount,
           tipEnteredBy: session.user.id,
-          tipEnteredAt: tip.amount > 0 ? new Date() : null,
+          tipEnteredAt: perPersonAmount > 0 ? new Date() : null,
           tipUpdatedAt: new Date(),
         },
       });
@@ -94,10 +90,22 @@ export async function POST(
 
     await prisma.$transaction(updatePromises);
 
+    // Automatically publish tips if amount > 0
+    if (perPersonAmount > 0) {
+      await prisma.shift.update({
+        where: { id: shiftId },
+        data: {
+          tipsPublished: true,
+          tipsPublishedAt: new Date(),
+          tipsPublishedBy: session.user.id,
+        },
+      });
+    }
+
     // Get updated assignments with shift and venue details
     const updatedAssignments = await prisma.shiftAssignment.findMany({
       where: {
-        shiftId: params.id,
+        shiftId: shiftId,
       },
       include: {
         user: {
@@ -129,9 +137,9 @@ export async function POST(
           .map((assignment) =>
             NotificationService.create({
               userId: assignment.user.id,
-              type: 'SHIFT_ASSIGNED',
+              type: 'TIP_UPDATED',
               title: 'Tips Updated',
-              message: `Your tips for ${assignment.shift.venue.name} on ${new Date(assignment.shift.date).toLocaleDateString()} have been updated: $${assignment.tipAmount?.toFixed(2) || '0.00'}`,
+              message: `Tip pool for ${assignment.shift.venue.name} on ${new Date(assignment.shift.date).toLocaleDateString()} has been updated. Your share: $${assignment.tipAmount?.toFixed(2) || '0.00'}`,
               data: {
                 shiftId: assignment.shift.id,
                 assignmentId: assignment.id,

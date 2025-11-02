@@ -58,7 +58,7 @@ export async function POST(request: NextRequest) {
         name: validatedData.name,
         role: validatedData.role,
         hashedPassword,
-        status: 'PENDING', // User needs to set password on first login
+        status: 'ACTIVE', // New users are active by default
       },
       select: {
         id: true,

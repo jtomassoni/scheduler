@@ -29,13 +29,13 @@ export async function middleware(req: NextRequest) {
     }
   }
 
-  // Manager+ routes (Manager or Super Admin)
+  // Manager+ routes (Manager or General Manager only - Super Admin has separate admin routes)
   if (
     path.startsWith('/venues/create') ||
     path.startsWith('/shifts/create') ||
     path.startsWith('/reports')
   ) {
-    if (token.role !== 'MANAGER' && token.role !== 'SUPER_ADMIN') {
+    if (token.role !== 'MANAGER' && token.role !== 'GENERAL_MANAGER') {
       return NextResponse.redirect(new URL('/dashboard', req.url));
     }
   }

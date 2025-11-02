@@ -24,6 +24,7 @@ export default function NewVenuePage() {
   const [priority, setPriority] = useState(0);
   const [availabilityDeadlineDay, setAvailabilityDeadlineDay] = useState(10);
   const [tipPoolEnabled, setTipPoolEnabled] = useState(false);
+  const [tradeDeadlineHours, setTradeDeadlineHours] = useState(24);
   const [selectedManagerIds, setSelectedManagerIds] = useState<string[]>([]);
 
   useEffect(() => {
@@ -83,6 +84,7 @@ export default function NewVenuePage() {
           priority,
           availabilityDeadlineDay,
           tipPoolEnabled,
+          tradeDeadlineHours,
           managerIds: selectedManagerIds,
         }),
       });
@@ -178,11 +180,12 @@ export default function NewVenuePage() {
                   className="checkbox"
                 />
                 <label htmlFor="isNetworked" className="cursor-pointer">
-                  Networked venue
+                  Allow staff to work at multiple venues
                 </label>
               </div>
               <p className="text-xs text-muted-foreground">
-                Networked venues share staff across the network
+                When enabled, staff assigned to this venue can also work at
+                other venues in your group
               </p>
             </div>
           </div>
@@ -231,13 +234,43 @@ export default function NewVenuePage() {
                   className="checkbox"
                 />
                 <label htmlFor="tipPool" className="cursor-pointer">
-                  Enable tip pool
+                  Track tips for this venue
                 </label>
               </div>
               <p className="text-xs text-muted-foreground">
-                When enabled, managers can track and distribute tips for this
-                venue
+                Enable tip tracking so you can enter and distribute tips after
+                each shift
               </p>
+            </div>
+          </div>
+
+          {/* Trade Settings */}
+          <div className="card">
+            <div className="card-header">
+              <h2 className="text-xl font-semibold">Shift Trade Settings</h2>
+            </div>
+            <div className="card-content space-y-4">
+              <div>
+                <label htmlFor="tradeDeadline" className="form-label">
+                  Trade Deadline (Hours Before Shift)
+                </label>
+                <input
+                  type="number"
+                  id="tradeDeadline"
+                  value={tradeDeadlineHours}
+                  onChange={(e) =>
+                    setTradeDeadlineHours(parseInt(e.target.value) || 24)
+                  }
+                  min="0"
+                  max="168"
+                  required
+                  className="input w-full"
+                />
+                <p className="text-xs text-muted-foreground mt-1">
+                  Staff must request trades at least this many hours before the
+                  shift starts (0-168 hours)
+                </p>
+              </div>
             </div>
           </div>
 

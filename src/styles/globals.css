@@ -135,7 +135,7 @@
   }
 
   .card-header {
-    @apply flex flex-col space-y-1.5 p-4 sm:p-6;
+    @apply flex flex-col space-y-1.5 p-4 sm:p-5;
   }
 
   .card-content {
@@ -215,6 +215,38 @@
   }
   .scrollbar-hide::-webkit-scrollbar {
     display: none;
+  }
+
+  /* Custom scrollbar styling */
+  * {
+    scrollbar-width: thin;
+    scrollbar-color: rgba(147, 51, 234, 0.3) transparent;
+  }
+
+  *::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+
+  *::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  *::-webkit-scrollbar-thumb {
+    background-color: rgba(147, 51, 234, 0.3);
+    border-radius: 3px;
+  }
+
+  *::-webkit-scrollbar-thumb:hover {
+    background-color: rgba(147, 51, 234, 0.5);
+  }
+
+  .dark *::-webkit-scrollbar-thumb {
+    background-color: rgba(147, 51, 234, 0.4);
+  }
+
+  .dark *::-webkit-scrollbar-thumb:hover {
+    background-color: rgba(147, 51, 234, 0.6);
   }
 
   /* Mobile-friendly forms */

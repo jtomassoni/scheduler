@@ -32,6 +32,7 @@ declare module 'next-auth/jwt' {
 export const authOptions: NextAuthOptions = {
   // Adapter not needed for JWT strategy
   // adapter: PrismaAdapter(prisma),
+  secret: process.env.NEXTAUTH_SECRET,
   session: {
     strategy: 'jwt',
   },
@@ -44,7 +45,7 @@ export const authOptions: NextAuthOptions = {
     CredentialsProvider({
       name: 'credentials',
       credentials: {
-        email: { label: 'Email', type: 'email' },
+        email: { label: 'Username or Email', type: 'text' },
         password: { label: 'Password', type: 'password' },
       },
       async authorize(credentials) {
@@ -52,17 +53,38 @@ export const authOptions: NextAuthOptions = {
           throw new Error('Email and password required');
         }
 
-        const user = await prisma.user.findUnique({
-          where: { email: credentials.email },
-          select: {
-            id: true,
-            email: true,
-            name: true,
-            role: true,
-            status: true,
-            hashedPassword: true,
-          },
-        });
+        const loginInput = credentials.email.trim();
+
+        // Try to find user - first by exact email, then by username (if no @ symbol)
+        let user = null;
+
+        if (loginInput.includes('@')) {
+          // It's an email - search directly
+          user = await prisma.user.findUnique({
+            where: { email: loginInput },
+            select: {
+              id: true,
+              email: true,
+              name: true,
+              role: true,
+              status: true,
+              hashedPassword: true,
+            },
+          });
+        } else {
+          // It's a username - try with @test.com appended (for test accounts)
+          user = await prisma.user.findUnique({
+            where: { email: `${loginInput}@test.com` },
+            select: {
+              id: true,
+              email: true,
+              name: true,
+              role: true,
+              status: true,
+              hashedPassword: true,
+            },
+          });
+        }
 
         if (!user || !user.hashedPassword) {
           throw new Error('Invalid email or password');
@@ -120,7 +142,19 @@ export function isSuperAdmin(role: Role): boolean {
 }
 
 export function isManager(role: Role): boolean {
-  return role === 'MANAGER' || role === 'SUPER_ADMIN';
+  return role === 'MANAGER' || role === 'GENERAL_MANAGER';
+}
+
+export function canManageShifts(role: Role): boolean {
+  return role === 'MANAGER' || role === 'GENERAL_MANAGER';
+}
+
+export function canOverride(role: Role): boolean {
+  return role === 'SUPER_ADMIN';
+}
+
+export function isGeneralManager(role: Role): boolean {
+  return role === 'GENERAL_MANAGER' || role === 'SUPER_ADMIN';
 }
 
 export function isStaff(role: Role): boolean {

@@ -31,30 +31,11 @@ export class NotificationService {
     const prefs = user?.notificationPrefs as {
       email?: boolean;
       push?: boolean;
-      quietHours?: {
-        enabled: boolean;
-        startTime: string;
-        endTime: string;
-      };
     } | null;
 
     // Check if notifications are disabled
     if (prefs?.email === false && prefs?.push === false) {
       return null; // User has disabled all notifications
-    }
-
-    // Check quiet hours
-    if (prefs?.quietHours?.enabled) {
-      const now = new Date();
-      const currentTime = `${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}`;
-
-      const { startTime, endTime } = prefs.quietHours;
-
-      // Simple time comparison (doesn't handle overnight ranges perfectly)
-      if (currentTime >= startTime && currentTime <= endTime) {
-        // In quiet hours, skip notification
-        return null;
-      }
     }
 
     // Create notification

@@ -31,13 +31,16 @@ export async function GET(request: NextRequest) {
       );
     }
 
+    const startDateObj = new Date(startDate);
+    const endDateObj = new Date(endDate);
+
     // Get all shift assignments in date range
     const assignments = await prisma.shiftAssignment.findMany({
       where: {
         shift: {
           date: {
-            gte: new Date(startDate),
-            lte: new Date(endDate),
+            gte: startDateObj,
+            lte: endDateObj,
           },
         },
       },
@@ -65,20 +68,44 @@ export async function GET(request: NextRequest) {
       },
     });
 
+    // Get historic schedules that overlap with date range
+    const historicSchedules = await prisma.historicSchedule.findMany({
+      where: {
+        AND: [
+          { periodStart: { lte: endDateObj } },
+          { periodEnd: { gte: startDateObj } },
+        ],
+      },
+      select: {
+        id: true,
+        data: true,
+        periodName: true,
+        venue: {
+          select: {
+            id: true,
+            name: true,
+          },
+        },
+      },
+    });
+
     // Aggregate data by user
     const userStats: Record<
       string,
       {
-        userId: string;
+        userId: string | null;
         userName: string;
-        email: string;
+        email: string | null;
         role: string;
         totalShifts: number;
         leadShifts: number;
         venues: Record<string, { venueName: string; count: number }>;
+        historicShifts: number;
+        currentShifts: number;
       }
     > = {};
 
+    // Process current shift assignments
     assignments.forEach((assignment) => {
       const userId = assignment.user.id;
 
@@ -91,10 +118,13 @@ export async function GET(request: NextRequest) {
           totalShifts: 0,
           leadShifts: 0,
           venues: {},
+          historicShifts: 0,
+          currentShifts: 0,
         };
       }
 
       userStats[userId].totalShifts += 1;
+      userStats[userId].currentShifts += 1;
 
       if (assignment.isLead) {
         userStats[userId].leadShifts += 1;
@@ -110,6 +140,61 @@ export async function GET(request: NextRequest) {
       userStats[userId].venues[venueId].count += 1;
     });
 
+    // Process historic schedule data
+    historicSchedules.forEach((schedule) => {
+      const historicData = schedule.data as Array<{
+        date: string;
+        userName: string;
+        role: 'BARTENDER' | 'BARBACK';
+        isLead?: boolean;
+        userId?: string | null;
+        venueName?: string;
+        matched?: boolean;
+      }>;
+
+      historicData.forEach((assignment) => {
+        const assignmentDate = new Date(assignment.date);
+
+        // Only include if within the report date range
+        if (assignmentDate < startDateObj || assignmentDate > endDateObj) {
+          return;
+        }
+
+        // Use userId if matched, otherwise use userName as key
+        const key = assignment.userId || `historic_${assignment.userName}`;
+        const venueName =
+          assignment.venueName || schedule.venue?.name || 'Unknown Venue';
+        const venueKey = schedule.venue?.id || `historic_${venueName}`;
+
+        if (!userStats[key]) {
+          userStats[key] = {
+            userId: assignment.userId || null,
+            userName: assignment.userName,
+            email: assignment.userId ? null : null, // Can't get email for unmatched historic users
+            role: assignment.role,
+            totalShifts: 0,
+            leadShifts: 0,
+            venues: {},
+            historicShifts: 0,
+            currentShifts: 0,
+          };
+        }
+
+        userStats[key].totalShifts += 1;
+        userStats[key].historicShifts += 1;
+
+        if (assignment.isLead) {
+          userStats[key].leadShifts += 1;
+        }
+
+        if (!userStats[key].venues[venueKey]) {
+          userStats[key].venues[venueKey] = { venueName, count: 0 };
+        }
+
+        userStats[key].venues[venueKey].count += 1;
+      });
+    });
+
     // Convert to array and sort by total shifts (descending)
     const report = Object.values(userStats)
       .map((stats) => ({
@@ -118,12 +203,32 @@ export async function GET(request: NextRequest) {
       }))
       .sort((a, b) => b.totalShifts - a.totalShifts);
 
+    // Calculate totals including historic
+    const totalHistoricShifts = historicSchedules.reduce((sum, schedule) => {
+      const data = schedule.data as Array<{ date: string }>;
+      return (
+        sum +
+        data.filter((a) => {
+          const date = new Date(a.date);
+          return date >= startDateObj && date <= endDateObj;
+        }).length
+      );
+    }, 0);
+
     return NextResponse.json({
       startDate,
       endDate,
-      totalAssignments: assignments.length,
+      totalAssignments: assignments.length + totalHistoricShifts,
+      currentAssignments: assignments.length,
+      historicAssignments: totalHistoricShifts,
       staffCount: report.length,
       data: report,
+      includesHistoric: historicSchedules.length > 0,
+      historicSchedules: historicSchedules.map((s) => ({
+        id: s.id,
+        periodName: s.periodName,
+        venueName: s.venue?.name || 'All Venues',
+      })),
     });
   } catch (error) {
     console.error('Error generating shift equity report:', error);

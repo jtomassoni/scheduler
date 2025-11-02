@@ -17,8 +17,7 @@ export async function GET() {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    // Fetch all venues - for now, return all
-    // Later we can filter based on user role/permissions
+    // Fetch all venues
     const venues = await prisma.venue.findMany({
       select: {
         id: true,
@@ -27,14 +26,29 @@ export async function GET() {
         priority: true,
         availabilityDeadlineDay: true,
         tipPoolEnabled: true,
+        tradeDeadlineHours: true,
         createdAt: true,
+        managers: {
+          select: {
+            id: true,
+            name: true,
+            email: true,
+          },
+        },
       },
       orderBy: {
         name: 'asc',
       },
     });
 
-    return NextResponse.json(venues);
+    // Add status field (default to ACTIVE if column doesn't exist)
+    // This will be properly typed once migration is applied
+    const venuesWithStatus = venues.map((venue: any) => ({
+      ...venue,
+      status: venue.status || 'ACTIVE',
+    }));
+
+    return NextResponse.json(venuesWithStatus);
   } catch (error) {
     console.error('Error fetching venues:', error);
     return NextResponse.json(
@@ -67,14 +81,24 @@ export async function POST(request: NextRequest) {
     const validatedData = venueCreateSchema.parse(body);
 
     // Create venue
+    const venueData: any = {
+      name: validatedData.name,
+      isNetworked: validatedData.isNetworked,
+      priority: validatedData.priority,
+      availabilityDeadlineDay: validatedData.availabilityDeadlineDay,
+      tipPoolEnabled: validatedData.tipPoolEnabled,
+      tradeDeadlineHours: validatedData.tradeDeadlineHours || 24,
+      createdById: session.user.id,
+    };
+
+    // Add status if migration has been applied
+    if (validatedData.status) {
+      venueData.status = validatedData.status;
+    }
+
     const venue = await prisma.venue.create({
       data: {
-        name: validatedData.name,
-        isNetworked: validatedData.isNetworked,
-        priority: validatedData.priority,
-        availabilityDeadlineDay: validatedData.availabilityDeadlineDay,
-        tipPoolEnabled: validatedData.tipPoolEnabled,
-        createdById: session.user.id,
+        ...venueData,
         ...(validatedData.managerIds &&
           validatedData.managerIds.length > 0 && {
             managers: {

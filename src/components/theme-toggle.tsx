@@ -15,55 +15,56 @@ export function ThemeToggle() {
   if (!mounted) {
     return (
       <button
-        className="btn btn-ghost h-10 w-10 p-0"
+        className="inline-flex items-center gap-2 px-4 py-2 rounded-lg border border-border bg-background"
         aria-label="Toggle theme"
+        disabled
       >
         <span className="sr-only">Loading theme</span>
       </button>
     );
   }
 
+  // Cycle through themes: light -> dark -> light (skip system for manual toggling)
+  const cycleTheme = () => {
+    if (theme === 'light') {
+      setTheme('dark');
+    } else if (theme === 'dark') {
+      setTheme('light');
+    } else {
+      // If currently on 'system', go to light
+      setTheme('light');
+    }
+  };
+
+  // Get the next theme for the tooltip
+  const getNextTheme = () => {
+    if (
+      theme === 'light' ||
+      (theme === 'system' && resolvedTheme === 'light')
+    ) {
+      return 'dark';
+    }
+    return 'light';
+  };
+
   return (
-    <div className="flex items-center gap-2">
-      <button
-        onClick={() => setTheme('light')}
-        className={`btn h-10 px-3 ${
-          theme === 'light' ? 'btn-primary' : 'btn-ghost'
-        }`}
-        aria-label="Light theme"
-        aria-pressed={theme === 'light'}
-      >
+    <button
+      onClick={cycleTheme}
+      className="w-full flex items-center justify-between px-3 py-2 rounded-lg border border-gray-700 dark:border-gray-600 bg-gray-50 dark:bg-gray-800/50 hover:bg-gray-100 dark:hover:bg-gray-800 transition-all text-sm"
+      aria-label={`Toggle theme (Current: ${resolvedTheme}, Next: ${getNextTheme()})`}
+      title={`Theme: ${resolvedTheme === 'light' ? 'Light' : 'Dark'} → Next: ${getNextTheme() === 'light' ? 'Light' : 'Dark'}`}
+    >
+      <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
+        {resolvedTheme === 'dark' ? 'Dark' : 'Light'} Mode
+      </span>
+      {resolvedTheme === 'dark' ? (
         <svg
           xmlns="http://www.w3.org/2000/svg"
           fill="none"
           viewBox="0 0 24 24"
           strokeWidth={1.5}
           stroke="currentColor"
-          className="w-5 h-5"
-        >
-          <path
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            d="M12 3v2.25m6.364.386l-1.591 1.591M21 12h-2.25m-.386 6.364l-1.591-1.591M12 18.75V21m-4.773-4.227l-1.591 1.591M5.25 12H3m4.227-4.773L5.636 5.636M15.75 12a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0z"
-          />
-        </svg>
-        <span className="ml-2">Light</span>
-      </button>
-      <button
-        onClick={() => setTheme('dark')}
-        className={`btn h-10 px-3 ${
-          theme === 'dark' ? 'btn-primary' : 'btn-ghost'
-        }`}
-        aria-label="Dark theme"
-        aria-pressed={theme === 'dark'}
-      >
-        <svg
-          xmlns="http://www.w3.org/2000/svg"
-          fill="none"
-          viewBox="0 0 24 24"
-          strokeWidth={1.5}
-          stroke="currentColor"
-          className="w-5 h-5"
+          className="w-4 h-4 text-gray-700 dark:text-gray-300"
         >
           <path
             strokeLinecap="round"
@@ -71,36 +72,22 @@ export function ThemeToggle() {
             d="M21.752 15.002A9.718 9.718 0 0118 15.75c-5.385 0-9.75-4.365-9.75-9.75 0-1.33.266-2.597.748-3.752A9.753 9.753 0 003 11.25C3 16.635 7.365 21 12.75 21a9.753 9.753 0 009.002-5.998z"
           />
         </svg>
-        <span className="ml-2">Dark</span>
-      </button>
-      <button
-        onClick={() => setTheme('system')}
-        className={`btn h-10 px-3 ${
-          theme === 'system' ? 'btn-primary' : 'btn-ghost'
-        }`}
-        aria-label="System theme"
-        aria-pressed={theme === 'system'}
-      >
+      ) : (
         <svg
           xmlns="http://www.w3.org/2000/svg"
           fill="none"
           viewBox="0 0 24 24"
           strokeWidth={1.5}
           stroke="currentColor"
-          className="w-5 h-5"
+          className="w-4 h-4 text-gray-700 dark:text-gray-300"
         >
           <path
             strokeLinecap="round"
             strokeLinejoin="round"
-            d="M9 17.25v1.007a3 3 0 01-.879 2.122L7.5 21h9l-.621-.621A3 3 0 0115 18.257V17.25m6-12V15a2.25 2.25 0 01-2.25 2.25H5.25A2.25 2.25 0 013 15V5.25m18 0A2.25 2.25 0 0018.75 3H5.25A2.25 2.25 0 003 5.25m18 0V12a2.25 2.25 0 01-2.25 2.25H5.25A2.25 2.25 0 013 12V5.25"
+            d="M12 3v2.25m6.364.386l-1.591 1.591M21 12h-2.25m-.386 6.364l-1.591-1.591M12 18.75V21m-4.773-4.227l-1.591 1.591M5.25 12H3m4.227-4.773L5.636 5.636M15.75 12a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0z"
           />
         </svg>
-        <span className="ml-2">System</span>
-      </button>
-      <span className="text-xs text-muted-foreground ml-2">
-        ({resolvedTheme})
-      </span>
-    </div>
+      )}
+    </button>
   );
 }
-

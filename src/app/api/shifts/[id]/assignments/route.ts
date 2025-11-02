@@ -22,12 +22,13 @@ export async function POST(
     }
 
     // Only managers and super admins can assign shifts
-    if (!isManager(session.user.role)) {
+    if (!isManager(session.user.role) && session.user.role !== 'SUPER_ADMIN') {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
 
     const body = await request.json();
     const overrideId = body.overrideId; // Optional override ID to bypass validation
+    const bypassValidation = body.bypassValidation === true; // Allow super admin to bypass
 
     // Validate request body
     const validatedData = shiftAssignmentSchema.parse({
@@ -63,6 +64,7 @@ export async function POST(
         isLead: true,
         hasDayJob: true,
         dayJobCutoff: true,
+        preferredVenuesOrder: true,
         availabilities: {
           where: {
             month: shift.date.toISOString().slice(0, 7), // YYYY-MM format
@@ -74,6 +76,9 @@ export async function POST(
     if (!user) {
       return NextResponse.json({ error: 'User not found' }, { status: 404 });
     }
+
+    // Check if user is super admin (can bypass validation)
+    const isSuperAdmin = session.user.role === 'SUPER_ADMIN';
 
     // Check if there's an active override
     let hasActiveOverride = false;
@@ -87,7 +92,7 @@ export async function POST(
       }
     }
 
-    // Validation checks (skip if override is active)
+    // Validation checks (skip if override is active or super admin bypasses)
     const errors: Array<{
       field: string;
       message: string;
@@ -95,8 +100,22 @@ export async function POST(
       violationType?: string;
     }> = [];
 
-    // If there's an active override, skip validation checks
-    if (hasActiveOverride) {
+    // Check if user is eligible for this venue
+    // Users must have the venue in their preferredVenuesOrder to be assigned
+    if (!hasActiveOverride && !(isSuperAdmin && bypassValidation)) {
+      const userPreferredVenues = user.preferredVenuesOrder || [];
+      if (!userPreferredVenues.includes(shift.venue.id)) {
+        errors.push({
+          field: 'userId',
+          message: `User is not eligible to work at ${shift.venue.name}. Only staff assigned to this venue can be scheduled.`,
+          suggestion: 'Select a user who works at this venue',
+          violationType: 'venue_mismatch',
+        });
+      }
+    }
+
+    // If there's an active override or super admin bypasses, skip validation checks
+    if (hasActiveOverride || (isSuperAdmin && bypassValidation)) {
       // Create the assignment directly
       const assignment = await prisma.shiftAssignment.create({
         data: {
@@ -133,12 +152,14 @@ export async function POST(
       });
     }
 
-    // Check if lead assignment is valid
-    if (validatedData.isLead && !user.isLead) {
+    // Note: Venue eligibility check is done above, before other validations
+
+    // Check if lead assignment is valid (only bartenders can be leads)
+    if (validatedData.isLead && validatedData.role !== 'BARTENDER') {
       errors.push({
         field: 'isLead',
-        message: 'User is not designated as a lead',
-        suggestion: 'Remove lead designation or select a different user',
+        message: 'Only bartenders can be assigned as leads',
+        suggestion: 'Remove lead designation',
       });
     }
 
