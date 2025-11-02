@@ -18,7 +18,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Only managers and super admins can auto-schedule
-    if (!isManager(session.user)) {
+    if (!isManager(session.user.role) && session.user.role !== 'SUPER_ADMIN') {
       return NextResponse.json(
         { error: 'Only managers can auto-schedule shifts' },
         { status: 403 }

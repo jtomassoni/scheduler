@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useSession } from 'next-auth/react';
 import { PremiumLayout } from '@/components/premium-layout';
@@ -12,7 +12,7 @@ interface Venue {
   name: string;
 }
 
-export default function NewShiftPage() {
+function NewShiftPageContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { data: session, status } = useSession();
@@ -401,5 +401,26 @@ export default function NewShiftPage() {
         </main>
       </div>
     </PremiumLayout>
+  );
+}
+
+export default function NewShiftPage() {
+  return (
+    <Suspense
+      fallback={
+        <PremiumLayout>
+          <div className="min-h-screen flex items-center justify-center">
+            <div className="text-center">
+              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-purple-500 mx-auto mb-4"></div>
+              <p className="text-gray-600 dark:text-gray-400">
+                Loading shift form...
+              </p>
+            </div>
+          </div>
+        </PremiumLayout>
+      }
+    >
+      <NewShiftPageContent />
+    </Suspense>
   );
 }

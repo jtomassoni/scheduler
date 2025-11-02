@@ -14,6 +14,7 @@ interface StaffMember {
   email: string;
   role: string;
   isLead: boolean;
+  status?: string;
   preferredVenuesOrder?: string[];
   venueRankings?: Record<string, number> | null;
 }

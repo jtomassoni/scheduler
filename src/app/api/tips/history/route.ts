@@ -119,17 +119,19 @@ export async function GET(request: NextRequest) {
         : '0.0';
 
     // Get total shifts for target user (not just with tips)
-    const userTotalShifts = await prisma.shiftAssignment.count({
-      where: {
-        userId: targetUserId,
-        shift: {
-          date: {
-            gte: new Date(startDate),
-            lte: new Date(endDate),
+    const userTotalShifts = targetUserId
+      ? await prisma.shiftAssignment.count({
+          where: {
+            userId: targetUserId,
+            shift: {
+              date: {
+                gte: new Date(startDate),
+                lte: new Date(endDate),
+              },
+            },
           },
-        },
-      },
-    });
+        })
+      : 0;
 
     return NextResponse.json({
       startDate,
