@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { z } from 'zod';
+import { CompanyRequestStatus } from '@prisma/client';
 
 const companyRequestSchema = z.object({
   companyName: z.string().min(1, 'Company name is required').max(200),
@@ -63,12 +64,12 @@ export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url);
     const status = searchParams.get('status');
 
-    const where: { status?: string } = {};
+    const where: { status?: CompanyRequestStatus } = {};
     if (
       status &&
       ['PENDING', 'REVIEWED', 'APPROVED', 'DECLINED'].includes(status)
     ) {
-      where.status = status;
+      where.status = status as CompanyRequestStatus;
     }
 
     const requests = await prisma.companyRequest.findMany({
