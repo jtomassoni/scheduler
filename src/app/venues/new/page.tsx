@@ -287,10 +287,36 @@ export default function NewVenuePage() {
             </div>
             <div className="card-content">
               {managers.length === 0 ? (
-                <p className="text-sm text-muted-foreground">
-                  No managers available. You can create this venue without
-                  managers and add them later.
-                </p>
+                <div className="space-y-3">
+                  <p className="text-sm text-muted-foreground">
+                    No managers available. You can create this venue without
+                    managers and add them later.
+                  </p>
+                  <a
+                    href="/staff"
+                    target="_blank"
+                    className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-gradient-to-r from-purple-600 to-blue-600 text-white font-medium hover:from-purple-500 hover:to-blue-500 transition-all text-sm"
+                  >
+                    <svg
+                      className="w-4 h-4"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M12 4v16m8-8H4"
+                      />
+                    </svg>
+                    Go to Staff Page to Create Manager
+                  </a>
+                  <p className="text-xs text-muted-foreground">
+                    Create a manager account on the Staff page, then come back
+                    to assign them to this venue.
+                  </p>
+                </div>
               ) : (
                 <div className="space-y-2">
                   {managers.map((manager) => (

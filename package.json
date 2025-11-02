@@ -20,7 +20,8 @@
     "db:migrate": "prisma migrate dev",
     "db:migrate:deploy": "prisma migrate deploy",
     "db:studio": "prisma studio",
-    "db:seed": "dotenv -e .env -- tsx prisma/seed.ts",
+    "db:seed": "dotenv -e .env -- tsx scripts/seed-demo.ts",
+    "db:seed:legacy": "dotenv -e .env -- tsx prisma/seed.ts",
     "db:setup": "prisma generate && prisma db push && npm run db:seed",
     "prepare": "husky install"
   },
@@ -70,6 +71,6 @@
     ]
   },
   "prisma": {
-    "seed": "tsx prisma/seed.ts"
+    "seed": "tsx scripts/seed-demo.ts"
   }
 }

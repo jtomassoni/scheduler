@@ -80,6 +80,54 @@ export async function POST(request: NextRequest) {
     // Validate request body
     const validatedData = venueCreateSchema.parse(body);
 
+    // Handle fallback admin - find or create a real superadmin user ID
+    let creatorId = session.user.id;
+    if (
+      creatorId === 'system-admin-fallback-id' ||
+      creatorId.startsWith('system-admin-fallback-')
+    ) {
+      // Find an existing SUPER_ADMIN user to use as creator
+      const superAdmin = await prisma.user.findFirst({
+        where: { role: 'SUPER_ADMIN', status: 'ACTIVE' },
+        select: { id: true },
+      });
+
+      if (!superAdmin) {
+        // No superadmin exists - create one from the fallback admin session
+        // Extract username from session email (format: username@system.admin)
+        const fallbackUsername =
+          session.user.email.replace('@system.admin', '') || 'admin';
+        const fallbackEmail = `${fallbackUsername}@jschedules.com`;
+
+        // Check if this email already exists
+        const existingUser = await prisma.user.findUnique({
+          where: { email: fallbackEmail },
+        });
+
+        if (existingUser) {
+          // User exists but might not be superadmin - use it
+          creatorId = existingUser.id;
+        } else {
+          // Create new superadmin user
+          const newSuperAdmin = await prisma.user.create({
+            data: {
+              email: fallbackEmail,
+              name: session.user.name || fallbackUsername,
+              role: 'SUPER_ADMIN',
+              status: 'ACTIVE',
+              hasDayJob: false,
+              isLead: false,
+              preferredVenuesOrder: [],
+              // Password will need to be set separately via profile/password reset
+            },
+          });
+          creatorId = newSuperAdmin.id;
+        }
+      } else {
+        creatorId = superAdmin.id;
+      }
+    }
+
     // Create venue
     const venueData: any = {
       name: validatedData.name,
@@ -88,7 +136,7 @@ export async function POST(request: NextRequest) {
       availabilityDeadlineDay: validatedData.availabilityDeadlineDay,
       tipPoolEnabled: validatedData.tipPoolEnabled,
       tradeDeadlineHours: validatedData.tradeDeadlineHours || 24,
-      createdById: session.user.id,
+      createdById: creatorId,
     };
 
     // Add status if migration has been applied
