@@ -83,6 +83,7 @@ export default function ShiftDetailPage() {
     }
   }, [selectedUserId, availableUsers]);
   const [assigning, setAssigning] = useState(false);
+  const [autoAssigning, setAutoAssigning] = useState(false);
   const [validationErrors, setValidationErrors] = useState<
     Array<{
       field: string;
@@ -445,6 +446,51 @@ export default function ShiftDetailPage() {
       setError(
         err instanceof Error ? err.message : 'Failed to update on-call status'
       );
+    }
+  }
+
+  async function handleAutoAssign() {
+    if (!shift) return;
+
+    setAutoAssigning(true);
+    setError('');
+    setSuccess('');
+
+    try {
+      const response = await fetch(`/api/shifts/${shiftId}/auto-assign`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+
+      if (!response.ok) {
+        const data = await response.json();
+        throw new Error(data.error || 'Failed to auto-assign staff');
+      }
+
+      const result = await response.json();
+
+      // Refresh shift data
+      const shiftRes = await fetch(`/api/shifts/${shiftId}`);
+      const shiftData = await shiftRes.json();
+      setShift(shiftData);
+
+      if (result.assigned > 0) {
+        setSuccess(
+          `Auto-assigned ${result.assigned} staff member(s)! ${result.summary?.leadsAssigned || 0} lead(s), ${result.summary?.bartendersAssigned || 0} bartender(s), ${result.summary?.barbacksAssigned || 0} barback(s).`
+        );
+      } else {
+        setError(
+          'No additional staff could be auto-assigned. All eligible staff may already be assigned or unavailable.'
+        );
+      }
+    } catch (err) {
+      setError(
+        err instanceof Error ? err.message : 'Failed to auto-assign staff'
+      );
+    } finally {
+      setAutoAssigning(false);
     }
   }
 
@@ -955,13 +1001,6 @@ export default function ShiftDetailPage() {
             </div>
           </PremiumCard>
 
-          {/* Error Display */}
-          {error && (
-            <div className="mb-3 p-3 bg-red-500/10 border border-red-500/30 text-red-400 rounded-lg text-xs">
-              {error}
-            </div>
-          )}
-
           {/* Missing Tip Entry Warning - Compact */}
           {isManager &&
             shift.venue.tipPoolEnabled &&
@@ -1009,12 +1048,62 @@ export default function ShiftDetailPage() {
                   <h2 className="text-lg font-semibold text-foreground dark:text-gray-100">
                     Staff Assignments
                   </h2>
-                  <button
-                    onClick={() => setShowAssignModal(true)}
-                    className="px-3 py-1.5 rounded-lg bg-gradient-to-r from-purple-600 to-blue-600 text-white font-semibold hover:from-purple-500 hover:to-blue-500 transition-all text-sm"
-                  >
-                    + Assign
-                  </button>
+                  <div className="flex items-center gap-2">
+                    <button
+                      onClick={handleAutoAssign}
+                      disabled={autoAssigning}
+                      className="px-3 py-1.5 rounded-lg bg-gradient-to-r from-purple-600 to-blue-600 text-white font-semibold hover:from-purple-500 hover:to-blue-500 transition-all text-sm disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-1.5"
+                    >
+                      {autoAssigning ? (
+                        <>
+                          <svg
+                            className="animate-spin h-4 w-4"
+                            xmlns="http://www.w3.org/2000/svg"
+                            fill="none"
+                            viewBox="0 0 24 24"
+                          >
+                            <circle
+                              className="opacity-25"
+                              cx="12"
+                              cy="12"
+                              r="10"
+                              stroke="currentColor"
+                              strokeWidth="4"
+                            ></circle>
+                            <path
+                              className="opacity-75"
+                              fill="currentColor"
+                              d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                            ></path>
+                          </svg>
+                          Auto-assigning...
+                        </>
+                      ) : (
+                        <>
+                          <svg
+                            className="w-4 h-4"
+                            fill="none"
+                            stroke="currentColor"
+                            viewBox="0 0 24 24"
+                          >
+                            <path
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              strokeWidth={2}
+                              d="M13 10V3L4 14h7v7l9-11h-7z"
+                            />
+                          </svg>
+                          Auto Assign
+                        </>
+                      )}
+                    </button>
+                    <button
+                      onClick={() => setShowAssignModal(true)}
+                      className="px-3 py-1.5 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800/50 text-gray-700 dark:text-gray-300 font-medium hover:bg-gray-50 dark:hover:bg-gray-800 transition-all text-sm"
+                    >
+                      + Assign Manually
+                    </button>
+                  </div>
                 </div>
                 {shift.assignments.length === 0 ? (
                   <div className="text-center py-4">
@@ -1024,12 +1113,65 @@ export default function ShiftDetailPage() {
                         No staff assigned
                       </span>
                     </div>
-                    <button
-                      onClick={() => setShowAssignModal(true)}
-                      className="px-3 py-1.5 rounded-lg bg-gradient-to-r from-purple-600 to-blue-600 text-white font-semibold hover:from-purple-500 hover:to-blue-500 transition-all text-sm"
-                    >
-                      Assign Staff
-                    </button>
+                    <div className="flex flex-col items-center gap-3">
+                      <button
+                        onClick={handleAutoAssign}
+                        disabled={autoAssigning}
+                        className="px-4 py-2 rounded-lg bg-gradient-to-r from-purple-600 to-blue-600 text-white font-semibold hover:from-purple-500 hover:to-blue-500 transition-all text-sm disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-1.5"
+                      >
+                        {autoAssigning ? (
+                          <>
+                            <svg
+                              className="animate-spin h-4 w-4"
+                              xmlns="http://www.w3.org/2000/svg"
+                              fill="none"
+                              viewBox="0 0 24 24"
+                            >
+                              <circle
+                                className="opacity-25"
+                                cx="12"
+                                cy="12"
+                                r="10"
+                                stroke="currentColor"
+                                strokeWidth="4"
+                              ></circle>
+                              <path
+                                className="opacity-75"
+                                fill="currentColor"
+                                d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                              ></path>
+                            </svg>
+                            Auto-assigning...
+                          </>
+                        ) : (
+                          <>
+                            <svg
+                              className="w-4 h-4"
+                              fill="none"
+                              stroke="currentColor"
+                              viewBox="0 0 24 24"
+                            >
+                              <path
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                strokeWidth={2}
+                                d="M13 10V3L4 14h7v7l9-11h-7z"
+                              />
+                            </svg>
+                            Auto Assign Staff
+                          </>
+                        )}
+                      </button>
+                      <div className="flex items-center gap-2 text-xs text-gray-400 dark:text-gray-500">
+                        <span>or</span>
+                        <button
+                          onClick={() => setShowAssignModal(true)}
+                          className="px-3 py-1 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800/50 text-gray-600 dark:text-gray-400 font-medium hover:bg-gray-50 dark:hover:bg-gray-800 transition-all text-xs"
+                        >
+                          Assign Manually
+                        </button>
+                      </div>
+                    </div>
                   </div>
                 ) : (
                   <div className="space-y-1 max-h-[300px] overflow-y-auto">

@@ -107,10 +107,9 @@ export async function autoFillShift(options: AutoFillOptions) {
   const assignedUserIds = new Set(existingAssignments.map((a) => a.userId));
 
   // Filter staff who:
-  // 1. Are available on this date
+  // 1. Are not already assigned
   // 2. Have the correct role
-  // 3. Are not already assigned
-  // 4. Are leads if we need leads
+  // Note: For now, we assume all staff have open availability (availability checking disabled until user profiles are set up)
   const availableStaff = potentialStaff
     .filter((staff) => {
       // Skip if already assigned
@@ -118,16 +117,8 @@ export async function autoFillShift(options: AutoFillOptions) {
         return false;
       }
 
-      // Check availability
-      const userAvailability = availabilityMap.get(staff.id);
-      if (!userAvailability) {
-        return false; // No availability data submitted
-      }
-
-      const dayAvailability = userAvailability[shiftDateStr];
-      if (!dayAvailability || !dayAvailability.available) {
-        return false; // Not available on this date
-      }
+      // TODO: When availability system is fully implemented, add back availability checks here
+      // For now, assume all eligible staff are available
 
       return true;
     })
@@ -168,6 +159,8 @@ export async function autoFillShift(options: AutoFillOptions) {
       if (aVenueIndex !== -1 && bVenueIndex !== -1) {
         return aVenueIndex - bVenueIndex;
       }
+
+      // TODO: When availability system is fully implemented, add availability as a sorting priority here
 
       return 0;
     });
