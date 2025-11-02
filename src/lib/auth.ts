@@ -71,12 +71,26 @@ export const authOptions: NextAuthOptions = {
         const fallbackUsername = process.env.FALLBACK_ADMIN_USERNAME;
         const fallbackPassword = process.env.FALLBACK_ADMIN_PASSWORD;
 
+        // Debug logging (remove in production if needed)
+        if (fallbackUsername) {
+          console.log('[AUTH DEBUG] Fallback admin username configured');
+          console.log(
+            '[AUTH DEBUG] Attempting login with:',
+            loginInput.toLowerCase()
+          );
+          console.log(
+            '[AUTH DEBUG] Username match:',
+            loginInput.toLowerCase() === fallbackUsername.toLowerCase()
+          );
+        }
+
         if (
           fallbackUsername &&
           fallbackPassword &&
           loginInput.toLowerCase() === fallbackUsername.toLowerCase() &&
           credentials.password === fallbackPassword
         ) {
+          console.log('[AUTH DEBUG] Fallback admin authentication successful');
           return {
             id: 'system-admin-fallback-id',
             email: `${fallbackUsername}@system.admin`,
