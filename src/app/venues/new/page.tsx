@@ -277,15 +277,19 @@ export default function NewVenuePage() {
           {/* Manager Assignment */}
           <div className="card">
             <div className="card-header">
-              <h2 className="text-xl font-semibold">Assign Managers</h2>
+              <h2 className="text-xl font-semibold">
+                Assign Managers (Optional)
+              </h2>
               <p className="text-sm text-muted-foreground mt-1">
-                Select managers who can schedule shifts at this venue
+                Select managers who can schedule shifts at this venue. You can
+                add managers later.
               </p>
             </div>
             <div className="card-content">
               {managers.length === 0 ? (
                 <p className="text-sm text-muted-foreground">
-                  No managers available
+                  No managers available. You can create this venue without
+                  managers and add them later.
                 </p>
               ) : (
                 <div className="space-y-2">

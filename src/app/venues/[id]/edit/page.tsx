@@ -348,9 +348,12 @@ export default function EditVenuePage() {
           {session?.user?.role === 'SUPER_ADMIN' && (
             <div className="card">
               <div className="card-header">
-                <h2 className="text-xl font-semibold">Assign Managers</h2>
+                <h2 className="text-xl font-semibold">
+                  Assign Managers (Optional)
+                </h2>
                 <p className="text-sm text-muted-foreground mt-1">
-                  Select managers who can schedule shifts at this venue
+                  Select managers who can schedule shifts at this venue. Venues
+                  can exist without managers.
                 </p>
               </div>
               <div className="card-content">
