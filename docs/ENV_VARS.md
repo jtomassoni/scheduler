@@ -20,6 +20,19 @@ VAPID_PRIVATE_KEY
 VAPID_SUBJECT
 ```
 
+### Optional Variables (Emergency Fallback Admin):
+
+```
+FALLBACK_ADMIN_USERNAME
+FALLBACK_ADMIN_PASSWORD
+```
+
+OR (for multiple admins):
+
+```
+FALLBACK_ADMINS
+```
+
 ---
 
 ## Detailed Variable Guide
@@ -196,3 +209,9 @@ mailto:admin@yourscheduler.com
 → Make sure you've installed `web-push` and uncommented code in `push-sender.ts`
 → Verify VAPID keys are correct
 → Check browser console for errors
+
+**Emergency fallback admin**
+→ Set `FALLBACK_ADMIN_USERNAME` and `FALLBACK_ADMIN_PASSWORD` in Vercel
+→ Or use `FALLBACK_ADMINS` for multiple accounts (format: `user1:pass1,user2:pass2`)
+→ Works even if database is unavailable
+→ See `docs/FALLBACK_ADMIN.md` for full details

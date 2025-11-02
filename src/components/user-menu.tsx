@@ -43,10 +43,11 @@ export function UserMenu() {
     <div className="relative" ref={dropdownRef}>
       <button
         onClick={() => setIsOpen(!isOpen)}
-        className="flex items-center gap-2 px-3 py-2 rounded-lg border border-gray-700 dark:border-gray-600 bg-gray-100 dark:bg-gray-800/50 text-gray-700 dark:text-gray-300 font-medium hover:bg-gray-200 dark:hover:bg-gray-800 transition-all text-sm"
+        className="flex items-center gap-1.5 sm:gap-2 px-2 sm:px-3 py-2 rounded-lg border border-gray-700 dark:border-gray-600 bg-gray-100 dark:bg-gray-800/50 text-gray-700 dark:text-gray-300 font-medium hover:bg-gray-200 dark:hover:bg-gray-800 transition-all text-xs sm:text-sm min-h-[44px] touch-manipulation"
+        aria-label="User menu"
       >
         <svg
-          className="w-4 h-4"
+          className="w-4 h-4 flex-shrink-0"
           fill="none"
           viewBox="0 0 24 24"
           stroke="currentColor"
@@ -58,16 +59,16 @@ export function UserMenu() {
             d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"
           />
         </svg>
-        <div className="flex flex-col items-start text-left">
-          <span className="text-sm leading-tight">
+        <div className="flex flex-col items-start text-left min-w-0 flex-1 hidden sm:flex">
+          <span className="text-xs sm:text-sm leading-tight truncate max-w-[120px] sm:max-w-none">
             {session.user.name || 'Profile'}
           </span>
-          <span className="text-xs text-gray-500 dark:text-gray-400 leading-tight">
+          <span className="text-[10px] sm:text-xs text-gray-500 dark:text-gray-400 leading-tight truncate max-w-[120px] sm:max-w-none">
             {session.user.email}
           </span>
         </div>
         <svg
-          className={`w-4 h-4 transition-transform ${isOpen ? 'rotate-180' : ''}`}
+          className={`w-3 h-3 sm:w-4 sm:h-4 transition-transform flex-shrink-0 ${isOpen ? 'rotate-180' : ''}`}
           fill="none"
           viewBox="0 0 24 24"
           stroke="currentColor"
@@ -82,7 +83,7 @@ export function UserMenu() {
       </button>
 
       {isOpen && (
-        <div className="absolute right-0 mt-2 w-56 rounded-lg border border-gray-700 dark:border-gray-600 bg-white dark:bg-gray-900 backdrop-blur-xl shadow-xl z-50 overflow-hidden">
+        <div className="absolute right-0 mt-2 w-56 sm:w-64 rounded-lg border border-gray-700 dark:border-gray-600 bg-white dark:bg-gray-900 backdrop-blur-xl shadow-xl z-50 overflow-hidden max-w-[calc(100vw-2rem)]">
           <div className="p-2">
             {/* User Info Header with gradient */}
             <div className="px-3 py-3 mb-2 rounded-lg bg-gradient-to-r from-purple-500/10 via-blue-500/10 to-cyan-500/10 border border-purple-500/20">

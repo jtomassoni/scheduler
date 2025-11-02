@@ -22,21 +22,34 @@ if (!process.env.NEXTAUTH_URL) {
 let handler: ReturnType<typeof NextAuth>;
 
 try {
+  if (!process.env.NEXTAUTH_SECRET) {
+    throw new Error(
+      'NEXTAUTH_SECRET is required but not set in environment variables'
+    );
+  }
   handler = NextAuth(authOptions);
 } catch (error) {
-  console.error('Failed to initialize NextAuth:', error);
-  // Create a fallback handler that returns error responses
+  console.error('❌ Failed to initialize NextAuth:', error);
+  console.error(
+    '   Make sure NEXTAUTH_SECRET is set in Vercel environment variables'
+  );
+
+  // Create a fallback handler that returns error responses for all NextAuth routes
   const errorHandler = async () => {
+    const errorMessage = process.env.NEXTAUTH_SECRET
+      ? 'NextAuth initialization failed. Check server logs in Vercel dashboard under Functions tab.'
+      : 'NEXTAUTH_SECRET is not configured. Go to Vercel → Project Settings → Environment Variables → Add NEXTAUTH_SECRET → Redeploy.';
+
     return NextResponse.json(
       {
         error: 'Authentication configuration error',
-        message: process.env.NEXTAUTH_SECRET
-          ? 'NextAuth initialization failed. Check server logs.'
-          : 'NEXTAUTH_SECRET is not configured. Please set it in environment variables.',
+        message: errorMessage,
       },
       { status: 500 }
     );
   };
+
+  // Wrap in NextAuth-compatible handler
   handler = errorHandler as any;
 }
 

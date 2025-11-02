@@ -507,30 +507,34 @@ export default function ShiftsPage() {
 
             <PremiumCard>
               <div className="p-6">
-                <div className="flex items-center justify-between mb-6">
+                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
                   <div>
-                    <h2 className="text-2xl font-bold text-gray-900 dark:text-gray-100 mb-2">
+                    <h2 className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-gray-100 mb-2">
                       Step 2: Select Day
                     </h2>
-                    <p className="text-gray-600 dark:text-gray-400">
+                    <p className="text-sm sm:text-base text-gray-600 dark:text-gray-400">
                       Choose a date to view and manage shifts
                     </p>
                   </div>
-                  <div className="flex items-center gap-3">
+                  <div className="flex items-center justify-between sm:justify-end gap-2 sm:gap-3">
                     <button
                       onClick={() => navigateMonth(-1)}
-                      className="px-3 py-2 rounded-lg border border-gray-300 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/50 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors text-sm"
+                      className="px-3 py-2 sm:px-4 sm:py-2 rounded-lg border border-gray-300 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/50 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors text-sm min-h-[44px] min-w-[44px] touch-manipulation"
+                      aria-label="Previous month"
                     >
-                      ← Previous
+                      <span className="hidden sm:inline">← Previous</span>
+                      <span className="sm:hidden">←</span>
                     </button>
-                    <div className="text-lg font-semibold text-gray-900 dark:text-gray-100 min-w-[200px] text-center">
+                    <div className="text-base sm:text-lg font-semibold text-gray-900 dark:text-gray-100 min-w-[120px] sm:min-w-[200px] text-center">
                       {monthName}
                     </div>
                     <button
                       onClick={() => navigateMonth(1)}
-                      className="px-3 py-2 rounded-lg border border-gray-300 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/50 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors text-sm"
+                      className="px-3 py-2 sm:px-4 sm:py-2 rounded-lg border border-gray-300 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/50 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors text-sm min-h-[44px] min-w-[44px] touch-manipulation"
+                      aria-label="Next month"
                     >
-                      Next →
+                      <span className="hidden sm:inline">Next →</span>
+                      <span className="sm:hidden">→</span>
                     </button>
                   </div>
                 </div>
@@ -538,21 +542,22 @@ export default function ShiftsPage() {
                 {/* Calendar Grid */}
                 <div>
                   {/* Day Headers */}
-                  <div className="grid grid-cols-7 gap-2 mb-4">
+                  <div className="grid grid-cols-7 gap-1 sm:gap-2 mb-2 sm:mb-4">
                     {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map(
                       (day) => (
                         <div
                           key={day}
-                          className="text-center text-sm font-medium text-gray-600 dark:text-gray-400 py-2"
+                          className="text-center text-xs sm:text-sm font-medium text-gray-600 dark:text-gray-400 py-1 sm:py-2"
                         >
-                          {day}
+                          <span className="hidden sm:inline">{day}</span>
+                          <span className="sm:hidden">{day[0]}</span>
                         </div>
                       )
                     )}
                   </div>
 
                   {/* Calendar Days */}
-                  <div className="grid grid-cols-7 gap-2">
+                  <div className="grid grid-cols-7 gap-1 sm:gap-2">
                     {getCalendarDays().map((date, idx) => {
                       if (!date) return null;
                       const isTodayDate = isToday(date);
@@ -569,7 +574,10 @@ export default function ShiftsPage() {
 
                       if (!date) {
                         return (
-                          <div key={idx} className="p-2 min-h-[80px]"></div>
+                          <div
+                            key={idx}
+                            className="p-1 sm:p-2 min-h-[50px] sm:min-h-[80px]"
+                          ></div>
                         );
                       }
 
@@ -584,13 +592,13 @@ export default function ShiftsPage() {
                       } else if (hasShifts) {
                         // Green for dates with shifts (regardless of past/future)
                         dayStyles =
-                          'border-green-500/50 bg-green-500/10 hover:border-green-500/70';
+                          'border-green-500/50 bg-green-500/10 hover:border-green-500/70 active:border-green-500/70';
                       } else if (isTodayDate) {
                         dayStyles =
-                          'border-purple-500/50 bg-purple-500/10 hover:border-purple-500/70';
+                          'border-purple-500/50 bg-purple-500/10 hover:border-purple-500/70 active:border-purple-500/70';
                       } else {
                         dayStyles =
-                          'border-gray-300 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/20 hover:border-purple-500/50 hover:bg-purple-500/5';
+                          'border-gray-300 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/20 hover:border-purple-500/50 hover:bg-purple-500/5 active:border-purple-500/50';
                       }
 
                       // Only disable past dates that don't have shifts
@@ -601,10 +609,11 @@ export default function ShiftsPage() {
                           key={idx}
                           onClick={() => handleDateSelect(date)}
                           disabled={isDisabled}
-                          className={`p-3 rounded-lg border min-h-[80px] transition-all ${dayStyles} ${isDisabled ? 'cursor-not-allowed' : 'cursor-pointer'}`}
+                          className={`p-1 sm:p-2 md:p-3 rounded-lg border min-h-[50px] sm:min-h-[70px] md:min-h-[80px] transition-all touch-manipulation ${dayStyles} ${isDisabled ? 'cursor-not-allowed opacity-50' : 'cursor-pointer'}`}
+                          aria-label={`Select ${date.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}`}
                         >
                           <div
-                            className={`text-lg font-semibold mb-1 ${
+                            className={`text-sm sm:text-base md:text-lg font-semibold mb-0.5 sm:mb-1 ${
                               isSelected
                                 ? 'text-purple-600 dark:text-purple-400'
                                 : hasShifts
@@ -617,14 +626,17 @@ export default function ShiftsPage() {
                             {date.getDate()}
                           </div>
                           {isSelected && (
-                            <div className="text-xs text-purple-600 dark:text-purple-400 font-medium">
-                              Selected
+                            <div className="text-[10px] sm:text-xs text-purple-600 dark:text-purple-400 font-medium leading-tight">
+                              <span className="hidden sm:inline">Selected</span>
+                              <span className="sm:hidden">✓</span>
                             </div>
                           )}
                           {hasShifts && !isSelected && (
-                            <div className="text-xs font-medium mt-1 text-green-600 dark:text-green-400">
-                              {dayShifts.length} shift
-                              {dayShifts.length !== 1 ? 's' : ''}
+                            <div className="text-[10px] sm:text-xs font-medium mt-0.5 sm:mt-1 text-green-600 dark:text-green-400 leading-tight">
+                              {dayShifts.length}{' '}
+                              <span className="hidden sm:inline">
+                                shift{dayShifts.length !== 1 ? 's' : ''}
+                              </span>
                             </div>
                           )}
                         </button>
@@ -749,13 +761,13 @@ export default function ShiftsPage() {
               </PremiumCard>
             ) : (
               <div className="space-y-4">
-                <div className="flex items-center justify-between mb-6">
-                  <h2 className="text-xl font-bold text-gray-900 dark:text-gray-100">
+                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-6">
+                  <h2 className="text-lg sm:text-xl font-bold text-gray-900 dark:text-gray-100">
                     Shifts for {selectedDateFormatted}
                   </h2>
                   <button
                     onClick={() => setShowCreateModal(true)}
-                    className="px-4 py-2 rounded-lg bg-gradient-to-r from-purple-600 via-blue-600 to-cyan-600 text-white font-semibold hover:shadow-lg hover:shadow-purple-500/30 transition-all text-sm"
+                    className="w-full sm:w-auto px-4 py-2.5 sm:py-2 rounded-lg bg-gradient-to-r from-purple-600 via-blue-600 to-cyan-600 text-white font-semibold hover:shadow-lg hover:shadow-purple-500/30 transition-all text-sm min-h-[44px] touch-manipulation"
                   >
                     + Add Shift
                   </button>
@@ -767,38 +779,44 @@ export default function ShiftsPage() {
                   return (
                     <PremiumCard
                       key={shift.id}
-                      className="border-gray-300 dark:border-gray-700 hover:border-purple-500/50 hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-all cursor-pointer group"
+                      className="border-gray-300 dark:border-gray-700 hover:border-purple-500/50 hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-all cursor-pointer group active:bg-gray-50 dark:active:bg-gray-800/50 touch-manipulation"
                       onClick={() => router.push(`/shifts/${shift.id}`)}
                     >
-                      <div className="p-6">
-                        <div className="flex items-center justify-between">
-                          <div className="flex-1">
-                            <div className="flex items-center gap-3 mb-2">
+                      <div className="p-4 sm:p-6">
+                        <div className="flex items-start justify-between gap-3">
+                          <div className="flex-1 min-w-0">
+                            <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3 mb-2">
                               {shift.eventName ? (
-                                <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 group-hover:text-purple-600 dark:group-hover:text-purple-400 transition-colors">
+                                <h3 className="text-base sm:text-lg font-semibold text-gray-900 dark:text-gray-100 group-hover:text-purple-600 dark:group-hover:text-purple-400 transition-colors truncate">
                                   {shift.eventName}
                                 </h3>
                               ) : (
-                                <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 group-hover:text-purple-600 dark:group-hover:text-purple-400 transition-colors">
+                                <h3 className="text-base sm:text-lg font-semibold text-gray-900 dark:text-gray-100 group-hover:text-purple-600 dark:group-hover:text-purple-400 transition-colors truncate">
                                   {shift.venue.name}
                                 </h3>
                               )}
                               {isFullyStaffed ? (
-                                <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold bg-green-500/10 text-green-600 dark:text-green-400 border border-green-500/20">
-                                  Fully Staffed
+                                <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold bg-green-500/10 text-green-600 dark:text-green-400 border border-green-500/20 flex-shrink-0">
+                                  <span className="hidden sm:inline">
+                                    Fully Staffed
+                                  </span>
+                                  <span className="sm:hidden">✓</span>
                                 </span>
                               ) : (
-                                <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold bg-yellow-500/10 text-yellow-600 dark:text-yellow-400 border border-yellow-500/20">
-                                  Needs Staff
+                                <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold bg-yellow-500/10 text-yellow-600 dark:text-yellow-400 border border-yellow-500/20 flex-shrink-0">
+                                  <span className="hidden sm:inline">
+                                    Needs Staff
+                                  </span>
+                                  <span className="sm:hidden">!</span>
                                 </span>
                               )}
                             </div>
                             {shift.eventName && (
-                              <div className="text-sm text-gray-600 dark:text-gray-400 mb-1">
+                              <div className="text-xs sm:text-sm text-gray-600 dark:text-gray-400 mb-2 truncate">
                                 {shift.venue.name}
                               </div>
                             )}
-                            <div className="flex items-center gap-4 text-sm text-gray-600 dark:text-gray-400">
+                            <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-4 text-xs sm:text-sm text-gray-600 dark:text-gray-400">
                               <span>
                                 {formatTime12Hour(shift.startTime)} -{' '}
                                 {formatTime12Hour(shift.endTime)}
@@ -807,11 +825,13 @@ export default function ShiftsPage() {
                                 {shift._count.assignments} /{' '}
                                 {shift.bartendersRequired +
                                   shift.barbacksRequired}{' '}
-                                assigned
+                                <span className="hidden sm:inline">
+                                  assigned
+                                </span>
                               </span>
                             </div>
                           </div>
-                          <div className="ml-4">
+                          <div className="ml-2 sm:ml-4 flex-shrink-0">
                             <svg
                               className="w-5 h-5 text-gray-400 group-hover:text-purple-400 transition-colors"
                               fill="none"
@@ -844,31 +864,34 @@ export default function ShiftsPage() {
     <PremiumLayout>
       <div className="relative z-10 min-h-screen">
         <header className="sticky top-0 z-20 bg-white/80 dark:bg-gray-900/80 backdrop-blur-xl border-b border-gray-200 dark:border-gray-800/50">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-2">
-            <div className="flex items-center justify-between">
-              <div>
-                <h1 className="text-xl sm:text-2xl font-bold bg-gradient-to-r from-purple-400 via-blue-400 to-cyan-400 bg-clip-text text-transparent">
+          <div className="max-w-7xl mx-auto px-3 sm:px-4 lg:px-8 py-2">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 sm:gap-0">
+              <div className="min-w-0 flex-1">
+                <h1 className="text-lg sm:text-xl lg:text-2xl font-bold bg-gradient-to-r from-purple-400 via-blue-400 to-cyan-400 bg-clip-text text-transparent truncate">
                   Shift Scheduler
                 </h1>
-                <p className="text-xs text-gray-600 dark:text-gray-400">
+                <p className="text-[10px] sm:text-xs text-gray-600 dark:text-gray-400 hidden sm:block">
                   Manage shifts and staff assignments
                 </p>
               </div>
-              <div className="flex items-center gap-3">
+              <div className="flex items-center gap-2 sm:gap-3">
                 <UserMenu />
                 <button
                   onClick={() => setShowCreateModal(true)}
-                  className="px-4 py-2 rounded-lg bg-gradient-to-r from-purple-600 via-blue-600 to-cyan-600 text-white font-semibold hover:shadow-lg hover:shadow-purple-500/30 transition-all text-sm"
+                  className="px-3 sm:px-4 py-2 rounded-lg bg-gradient-to-r from-purple-600 via-blue-600 to-cyan-600 text-white font-semibold hover:shadow-lg hover:shadow-purple-500/30 transition-all text-xs sm:text-sm min-h-[44px] touch-manipulation flex items-center"
                   title="Press Cmd/Ctrl+N to create a new shift"
+                  aria-label="Create new shift"
                 >
-                  Create Shift
+                  <span className="hidden sm:inline">Create Shift</span>
+                  <span className="sm:hidden">+ New</span>
                   <span className="hidden lg:inline ml-2 text-xs opacity-70">
                     ({navigator.platform.includes('Mac') ? '⌘' : 'Ctrl'}+N)
                   </span>
                 </button>
                 <button
                   onClick={() => router.push('/dashboard')}
-                  className="px-4 py-2 rounded-lg border border-gray-700 dark:border-gray-600 bg-gray-100 dark:bg-gray-800/50 text-gray-700 dark:text-gray-300 font-medium hover:bg-gray-200 dark:hover:bg-gray-800 transition-all text-sm"
+                  className="px-3 sm:px-4 py-2 rounded-lg border border-gray-700 dark:border-gray-600 bg-gray-100 dark:bg-gray-800/50 text-gray-700 dark:text-gray-300 font-medium hover:bg-gray-200 dark:hover:bg-gray-800 transition-all text-xs sm:text-sm min-h-[44px] touch-manipulation hidden sm:flex items-center"
+                  aria-label="Go to dashboard"
                 >
                   Dashboard
                 </button>
@@ -882,28 +905,34 @@ export default function ShiftsPage() {
 
           {/* Filters */}
           <PremiumCard>
-            <div className="p-3">
-              <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 mb-3">
-                <div className="flex items-center gap-2">
-                  <button
-                    onClick={() => navigateMonth(-1)}
-                    className="px-2 py-1 rounded-lg border border-gray-300 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/50 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors text-xs"
-                  >
-                    ← Prev
-                  </button>
-                  <div className="text-sm font-semibold text-gray-900 dark:text-gray-100 min-w-[160px] text-center">
-                    {monthName}
+            <div className="p-3 sm:p-4">
+              <div className="flex flex-col gap-3 mb-3">
+                <div className="flex items-center justify-between sm:justify-start gap-2">
+                  <div className="flex items-center gap-1 sm:gap-2 flex-1 sm:flex-initial">
+                    <button
+                      onClick={() => navigateMonth(-1)}
+                      className="px-2 sm:px-3 py-2 rounded-lg border border-gray-300 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/50 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors text-xs sm:text-sm min-h-[44px] min-w-[44px] touch-manipulation"
+                      aria-label="Previous month"
+                    >
+                      <span className="hidden sm:inline">← Prev</span>
+                      <span className="sm:hidden">←</span>
+                    </button>
+                    <div className="text-sm sm:text-base font-semibold text-gray-900 dark:text-gray-100 min-w-[120px] sm:min-w-[160px] text-center">
+                      {monthName}
+                    </div>
+                    <button
+                      onClick={() => navigateMonth(1)}
+                      className="px-2 sm:px-3 py-2 rounded-lg border border-gray-300 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/50 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors text-xs sm:text-sm min-h-[44px] min-w-[44px] touch-manipulation"
+                      aria-label="Next month"
+                    >
+                      <span className="hidden sm:inline">Next →</span>
+                      <span className="sm:hidden">→</span>
+                    </button>
                   </div>
-                  <button
-                    onClick={() => navigateMonth(1)}
-                    className="px-2 py-1 rounded-lg border border-gray-300 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/50 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors text-xs"
-                  >
-                    Next →
-                  </button>
                 </div>
 
-                <div className="flex items-center gap-4">
-                  <div>
+                <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 sm:gap-4">
+                  <div className="flex-1 sm:flex-initial">
                     <label
                       htmlFor="venueFilter"
                       className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1"
@@ -918,7 +947,7 @@ export default function ShiftsPage() {
                           e.target.value === 'all' ? '' : e.target.value
                         )
                       }
-                      className="px-3 py-1.5 rounded-lg border border-gray-300 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/50 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-purple-500/50 focus:border-transparent transition-all text-sm"
+                      className="w-full sm:w-auto px-3 py-2 sm:py-1.5 rounded-lg border border-gray-300 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/50 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-purple-500/50 focus:border-transparent transition-all text-sm min-h-[44px] touch-manipulation"
                     >
                       <option value="all">All Venues</option>
                       {venues.map((venue) => (
@@ -929,27 +958,27 @@ export default function ShiftsPage() {
                     </select>
                   </div>
 
-                  <div>
+                  <div className="flex-1 sm:flex-initial">
                     <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
                       View
                     </label>
                     <div className="flex gap-2">
                       <button
                         onClick={() => setViewMode('calendar')}
-                        className={`px-3 py-1.5 rounded-lg border text-xs font-medium transition-all ${
+                        className={`flex-1 sm:flex-initial px-3 py-2 sm:py-1.5 rounded-lg border text-xs sm:text-sm font-medium transition-all min-h-[44px] touch-manipulation ${
                           viewMode === 'calendar'
                             ? 'border-purple-500 bg-purple-500/10 text-purple-600 dark:text-purple-400'
-                            : 'border-gray-300 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/50 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800'
+                            : 'border-gray-300 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/50 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 active:bg-gray-100 dark:active:bg-gray-800'
                         }`}
                       >
                         Calendar
                       </button>
                       <button
                         onClick={() => setViewMode('list')}
-                        className={`px-3 py-1.5 rounded-lg border text-xs font-medium transition-all ${
+                        className={`flex-1 sm:flex-initial px-3 py-2 sm:py-1.5 rounded-lg border text-xs sm:text-sm font-medium transition-all min-h-[44px] touch-manipulation ${
                           viewMode === 'list'
                             ? 'border-purple-500 bg-purple-500/10 text-purple-600 dark:text-purple-400'
-                            : 'border-gray-300 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/50 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800'
+                            : 'border-gray-300 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/50 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 active:bg-gray-100 dark:active:bg-gray-800'
                         }`}
                       >
                         List
@@ -963,12 +992,15 @@ export default function ShiftsPage() {
                 <button
                   onClick={handleAutoSchedule}
                   disabled={autoScheduling || loading}
-                  className="px-4 py-2 rounded-lg bg-gradient-to-r from-purple-600 via-blue-600 to-cyan-600 text-white font-semibold hover:shadow-lg hover:shadow-purple-500/30 transition-all text-xs disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+                  className="w-full sm:w-auto px-4 py-2.5 sm:py-2 rounded-lg bg-gradient-to-r from-purple-600 via-blue-600 to-cyan-600 text-white font-semibold hover:shadow-lg hover:shadow-purple-500/30 transition-all text-xs sm:text-sm disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 min-h-[44px] touch-manipulation"
                 >
                   {autoScheduling ? (
                     <>
-                      <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-white"></div>
-                      Auto-Scheduling...
+                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                      <span className="hidden sm:inline">
+                        Auto-Scheduling...
+                      </span>
+                      <span className="sm:hidden">Scheduling...</span>
                     </>
                   ) : (
                     <>
@@ -985,7 +1017,8 @@ export default function ShiftsPage() {
                           d="M13 10V3L4 14h7v7l9-11h-7z"
                         />
                       </svg>
-                      Auto Schedule
+                      <span className="hidden sm:inline">Auto Schedule</span>
+                      <span className="sm:hidden">Auto</span>
                     </>
                   )}
                 </button>
@@ -1010,25 +1043,29 @@ export default function ShiftsPage() {
               <PremiumCard>
                 <div className="p-3">
                   {/* Day Headers */}
-                  <div className="grid grid-cols-7 gap-1 mb-2">
+                  <div className="grid grid-cols-7 gap-1 sm:gap-2 mb-2">
                     {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map(
                       (day) => (
                         <div
                           key={day}
-                          className="text-center text-xs font-medium text-gray-600 dark:text-gray-400 py-1"
+                          className="text-center text-[10px] sm:text-xs font-medium text-gray-600 dark:text-gray-400 py-1"
                         >
-                          {day}
+                          <span className="hidden sm:inline">{day}</span>
+                          <span className="sm:hidden">{day[0]}</span>
                         </div>
                       )
                     )}
                   </div>
 
                   {/* Calendar Days */}
-                  <div className="grid grid-cols-7 gap-1">
+                  <div className="grid grid-cols-7 gap-1 sm:gap-2">
                     {getCalendarDays().map((date, idx) => {
                       if (!date) {
                         return (
-                          <div key={idx} className="p-1 min-h-[100px]"></div>
+                          <div
+                            key={idx}
+                            className="p-0.5 sm:p-1 min-h-[60px] sm:min-h-[80px] md:min-h-[100px]"
+                          ></div>
                         );
                       }
 
@@ -1057,10 +1094,10 @@ export default function ShiftsPage() {
                       return (
                         <div
                           key={idx}
-                          className={`p-1 rounded-lg border min-h-[100px] ${dayStyles}`}
+                          className={`p-0.5 sm:p-1 rounded-lg border min-h-[60px] sm:min-h-[80px] md:min-h-[100px] ${dayStyles}`}
                         >
                           <div
-                            className={`text-sm font-semibold mb-0.5 ${
+                            className={`text-xs sm:text-sm font-semibold mb-0.5 ${
                               isTodayDate
                                 ? 'text-purple-600 dark:text-purple-400'
                                 : hasShifts
@@ -1071,44 +1108,35 @@ export default function ShiftsPage() {
                             {date.getDate()}
                           </div>
 
-                          <div className="space-y-0.5">
-                            {dayShifts.slice(0, 3).map((shift) => {
+                          <div className="space-y-0.5 overflow-hidden">
+                            {dayShifts.slice(0, 2).map((shift) => {
                               const isFullyStaffed = isShiftFullyStaffed(shift);
 
                               return (
                                 <div
                                   key={shift.id}
-                                  onClick={() =>
-                                    router.push(`/shifts/${shift.id}`)
-                                  }
-                                  className={`p-1 rounded cursor-pointer hover:opacity-80 transition-all text-[10px] ${
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    router.push(`/shifts/${shift.id}`);
+                                  }}
+                                  className={`p-0.5 sm:p-1 rounded cursor-pointer active:opacity-80 transition-all text-[9px] sm:text-[10px] touch-manipulation ${
                                     isFullyStaffed
                                       ? 'border-green-500/50 bg-green-500/10'
                                       : 'border-yellow-500/50 bg-yellow-500/10'
                                   } border`}
                                 >
-                                  <div className="font-semibold text-gray-900 dark:text-gray-200 truncate">
+                                  <div className="font-semibold text-gray-900 dark:text-gray-200 truncate leading-tight">
                                     {shift.eventName || shift.venue.name}
                                   </div>
-                                  {shift.eventName && (
-                                    <div className="text-gray-500 dark:text-gray-400 text-[9px] truncate">
-                                      {shift.venue.name}
-                                    </div>
-                                  )}
-                                  <div className="text-gray-600 dark:text-gray-400 text-[9px]">
+                                  <div className="text-gray-600 dark:text-gray-400 text-[8px] sm:text-[9px] leading-tight">
                                     {formatTime12Hour(shift.startTime)}
-                                  </div>
-                                  <div className="text-gray-500 dark:text-gray-500 text-[8px]">
-                                    {shift._count.assignments}/
-                                    {shift.bartendersRequired +
-                                      shift.barbacksRequired}
                                   </div>
                                 </div>
                               );
                             })}
-                            {dayShifts.length > 3 && (
-                              <div className="text-[10px] text-gray-500 dark:text-gray-500 text-center pt-0.5">
-                                +{dayShifts.length - 3} more
+                            {dayShifts.length > 2 && (
+                              <div className="text-[9px] sm:text-[10px] text-gray-500 dark:text-gray-500 text-center pt-0.5 leading-tight">
+                                +{dayShifts.length - 2}
                               </div>
                             )}
                           </div>
@@ -1369,7 +1397,9 @@ export default function ShiftsPage() {
                   </p>
                   <p className="text-xs text-gray-500 mt-1">
                     {selectedShiftForTips.assignments.length} staff member
-                    {selectedShiftForTips.assignments.length !== 1 ? 's' : ''}{' '}
+                    {selectedShiftForTips.assignments.length !== 1
+                      ? 's'
+                      : ''}{' '}
                     assigned
                   </p>
                 </div>
